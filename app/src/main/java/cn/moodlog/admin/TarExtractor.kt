@@ -54,6 +54,23 @@ class TarExtractor(
                 'g' -> { // 全局 pax 头
                     skip(size); skipPad(size); continue
                 }
+                // 符号链接：Ubuntu rootfs 依赖 usrmerge（/lib -> usr/lib、/bin -> usr/bin 等）
+                '2' -> {
+                    val linkTarget = String(header, 157, 100).trim('\u0000', ' ')
+                    if (fullName.isNotBlank() && linkTarget.isNotBlank()) {
+                        val t = File(dest, fullName)
+                        t.parentFile?.let { if (!it.exists()) it.mkdirs() }
+                        try {
+                            if (t.exists() || t.isDirectory) t.deleteRecursively()
+                            java.nio.file.Files.createSymbolicLink(
+                                t.toPath(), java.nio.file.Paths.get(linkTarget))
+                        } catch (_: Throwable) {
+                            // 符号链接创建失败不阻断整体解压
+                        }
+                    }
+                    skipPad(size)
+                    continue
+                }
             }
 
             val fullName = pendingName ?: if (prefix.isNotEmpty()) "$prefix/$name" else name
