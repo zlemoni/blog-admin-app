@@ -32,17 +32,21 @@ jobs:
           gradle-version: '8.7'
 
       - name: 准备签名
-        if: ${{ secrets.KEYSTORE_B64 != '' }}
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
         run: |
-          echo "${{ secrets.KEYSTORE_B64 }}" | base64 -d > $RUNNER_TEMP/blog.jks
-          ls -l $RUNNER_TEMP/blog.jks
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/blog.jks"
+            echo "KEYSTORE_PATH=$RUNNER_TEMP/blog.jks" >> "$GITHUB_ENV"
+            echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> "$GITHUB_ENV"
+            echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> "$GITHUB_ENV"
+            echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> "$GITHUB_ENV"
+            echo "已启用固定签名"
+          else
+            echo "无签名密钥，使用默认 debug 签名"
+          fi
 
       - name: Build APK
-        env:
-          KEYSTORE_PATH: ${{ secrets.KEYSTORE_B64 != '' && format('{0}/blog.jks', runner.temp) || '' }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: gradle assembleDebug --no-daemon --stacktrace
 
       - uses: actions/upload-artifact@v4
