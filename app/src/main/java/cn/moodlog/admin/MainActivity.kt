@@ -22,11 +22,11 @@ class MainActivity : AppCompatActivity() {
     private val ui = Handler(Looper.getMainLooper())
 
     // 运行环境分片（git 仓库里，走 jsDelivr / gh-proxy 国内可达）
-    private val parts = (0 until 8).map { "part-" + ('a' + it / 26).toChar() + ('a' + it % 26).toChar() }
+    private val parts = (0 until 9).map { "part-" + ('a' + it / 26).toChar() + ('a' + it % 26).toChar() }
     private val mirrors = listOf(
-        "https://cdn.jsdelivr.net/gh/zlemoni/blog-admin-app@main/payload/",
-        "https://gh-proxy.com/https://raw.githubusercontent.com/zlemoni/blog-admin-app/main/payload/",
-        "https://raw.githubusercontent.com/zlemoni/blog-admin-app/main/payload/"
+        "https://cdn.jsdelivr.net/gh/zlemoni/blog-admin-app@main/payload2/",
+        "https://gh-proxy.com/https://raw.githubusercontent.com/zlemoni/blog-admin-app/main/payload2/",
+        "https://raw.githubusercontent.com/zlemoni/blog-admin-app/main/payload2/"
     )
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -56,7 +56,7 @@ class MainActivity : AppCompatActivity() {
     private fun stage(msg: String) = js("window.__stage && window.__stage('$msg')")
 
     private fun payloadDir(): File = File(filesDir, "payload")
-    private val markerFile: File get() = File(filesDir, ".payload-v2")
+    private val markerFile: File get() = File(filesDir, ".payload-v3")
 
     // 以「解压完成标记」为准，避免靠单个文件是否存在来猜
     private fun ready(): Boolean =
@@ -160,6 +160,19 @@ class MainActivity : AppCompatActivity() {
         private fun installApk(apk: java.io.File) {
             ui.post {
                 try {
+                    log("APK 大小: ${apk.length() / 1048576} MB")
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        if (!packageManager.canRequestPackageInstalls()) {
+                            log("未授予「安装未知应用」权限，请到系统设置允许后重试")
+                            stage("请先允许本应用安装未知应用")
+                            val i = android.content.Intent(
+                                android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                                android.net.Uri.parse("package:$packageName"))
+                            i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            startActivity(i)
+                            return@post
+                        }
+                    }
                     val uri = androidx.core.content.FileProvider.getUriForFile(
                         this@MainActivity, "cn.moodlog.admin.fileprovider", apk)
                     val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
@@ -167,7 +180,9 @@ class MainActivity : AppCompatActivity() {
                         addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
+                    log("URI: $uri")
                     startActivity(intent)
+                    log("已调用系统安装器")
                     stage("请在系统安装界面确认")
                 } catch (e: Throwable) {
                     log("拉起安装器失败: ${e.message}")
