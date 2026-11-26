@@ -63,10 +63,16 @@
       document.getElementById('ver-text').textContent = '当前 ' + d.current
       if (d.hasUpdate) {
         box.innerHTML = '<div style="margin-bottom:6px">发现新版本 <b>' + d.latest + '</b></div>'
-          + '<button id="btn-dl-mirror" style="min-width:auto;padding:8px 12px">下载（加速镜像）</button> '
-          + '<button id="btn-dl-direct" style="min-width:auto;padding:8px 12px">下载（直链）</button>'
-        document.getElementById('btn-dl-mirror').onclick = () => Native.openLink(d.mirror)
-        document.getElementById('btn-dl-direct').onclick = () => Native.openLink(d.direct)
+          + '<button id="btn-dl-mirror" style="min-width:auto;padding:8px 12px">应用内下载（镜像）</button> '
+          + '<button id="btn-dl-direct" style="min-width:auto;padding:8px 12px">应用内下载（直链）</button>'
+        const doDownload = (url, btn) => {
+          btn.disabled = true
+          btn.textContent = '下载中…'
+          logEl.textContent = ''
+          try { Native.downloadUpdate(url) } catch (e) { window.__log('调用失败: ' + e) }
+        }
+        document.getElementById('btn-dl-mirror').onclick = (e) => doDownload(d.mirror, e.target)
+        document.getElementById('btn-dl-direct').onclick = (e) => doDownload(d.direct, e.target)
       } else {
         box.textContent = '已是最新版本'
       }
