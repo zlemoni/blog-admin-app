@@ -103,7 +103,7 @@ class MainActivity : AppCompatActivity() {
                 val libDir = File(applicationInfo.nativeLibraryDir)
                 val proot = File(libDir, "libproot.so")
                 if (!proot.exists()) { log("缺少 proot 二进制"); return@execute }
-                listOf("libtalloc.so.2", "libandroid-shmem.so").forEach { dep ->
+                listOf("libtalloc.so", "libandroid-shmem.so").forEach { dep ->
                     if (!File(libDir, dep).exists()) log("警告：缺少依赖 $dep")
                 }
 
