@@ -1,5 +1,5 @@
 {
-  "version": "0.6.4-p35",
-  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.6.4-p35/app-debug.apk",
-  "notes": "关闭远程字体提速，构建后显示产物统计"
+  "version": "0.7.0-p36",
+  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.7.0-p36/app-debug.apk",
+  "notes": "本地预览服务"
 }
