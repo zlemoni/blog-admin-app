@@ -19,8 +19,11 @@ class MainActivity : AppCompatActivity() {
     private val io = Executors.newSingleThreadExecutor()
     private val ui = Handler(Looper.getMainLooper())
 
-    // 首次启动时从这里拉运行环境（约 173 MB），之后完全离线
-    private val payloadUrl = "https://c.moodlog.cn/_dl/payload-86fz.tar.gz"
+    // 运行环境（首次启动下载），优先精简版，失败回退完整版
+    private val payloadUrls = listOf(
+        "https://c.moodlog.cn/_dl/payload-slim.tar.gz",
+        "https://c.moodlog.cn/_dl/payload-86fz.tar.gz"
+    )
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -68,8 +71,20 @@ class MainActivity : AppCompatActivity() {
                     val tgz = File(filesDir, "payload.tar.gz")
 
                     if (!tgz.exists() || tgz.length() < 10_000_000L) {
-                        stage("下载运行环境…")
-                        download(payloadUrl, tgz)
+                        var lastErr: Throwable? = null
+                        for (u in payloadUrls) {
+                            try {
+                                stage("下载运行环境…")
+                                log("源: $u")
+                                download(u, tgz)
+                                lastErr = null
+                                break
+                            } catch (e: Throwable) {
+                                lastErr = e
+                                log("该源失败: ${e.message}")
+                            }
+                        }
+                        if (lastErr != null) throw lastErr
                     }
 
                     stage("解压中…")
@@ -135,48 +150,78 @@ class MainActivity : AppCompatActivity() {
         }
 
         private fun download(url: String, out: File) {
-            val chunk = 4 * 1024 * 1024
             val total = remoteSize(url)
             if (total <= 0) throw IllegalStateException("无法获取文件大小")
-            log("文件大小: ${total / 1048576} MB，分片下载")
+            log("文件大小: ${total / 1048576} MB，4 线程并发下载")
+
             out.delete()
-            java.io.RandomAccessFile(out, "rw").use { raf ->
-                var offset = 0L
-                while (offset < total) {
-                    val end = minOf(offset + chunk - 1, total - 1)
-                    var attempt = 0
-                    var ok = false
-                    while (!ok && attempt < 6) {
-                        try {
-                            val conn = URL(url).openConnection() as HttpURLConnection
-                            conn.setRequestProperty("Range", "bytes=$offset-$end")
-                            conn.connectTimeout = 20000
-                            conn.readTimeout = 60000
-                            conn.instanceFollowRedirects = true
-                            val code = conn.responseCode
-                            if (code != 206 && code != 200) throw IllegalStateException("HTTP $code")
-                            var read = 0L
-                            conn.inputStream.use { input ->
-                                raf.seek(offset)
-                                val buf = ByteArray(64 * 1024)
-                                while (true) {
-                                    val n = input.read(buf)
-                                    if (n < 0) break
-                                    raf.write(buf, 0, n)
-                                    read += n
-                                }
+            java.io.RandomAccessFile(out, "rw").use { raf -> raf.setLength(total) }
+
+            val workers = 4
+            val chunk = 8L * 1024 * 1024
+            val parts = ((total + chunk - 1) / chunk).toInt()
+            val done = java.util.concurrent.atomic.AtomicLong(0)
+            val failed = java.util.concurrent.atomic.AtomicReference<Throwable?>(null)
+
+            val pool = java.util.concurrent.Executors.newFixedThreadPool(workers)
+            val latch = java.util.concurrent.CountDownLatch(parts)
+
+            for (i in 0 until parts) {
+                pool.execute {
+                    try {
+                        val start = i * chunk
+                        val end = minOf(start + chunk - 1, total - 1)
+                        var attempt = 0
+                        while (true) {
+                            try {
+                                fetchRange(url, start, end, out)
+                                done.addAndGet(end - start + 1)
+                                val pct = done.get() * 100 / total
+                                stage("下载中 $pct%")
+                                break
+                            } catch (e: Throwable) {
+                                attempt++
+                                if (attempt >= 8) throw e
+                                log("分片重试 $attempt @${start / 1048576}MB: ${e.message}")
+                                Thread.sleep(500L * attempt)
                             }
-                            if (read == 0L) throw IllegalStateException("空响应")
-                            offset += (end - offset + 1)
-                            ok = true
-                            stage("下载中 ${offset * 100 / total}%")
-                        } catch (e: Throwable) {
-                            attempt++
-                            log("分片重试 $attempt @${offset / 1048576}MB: ${e.message}")
-                            try { Thread.sleep(700L * attempt) } catch (_: InterruptedException) {}
                         }
+                    } catch (e: Throwable) {
+                        failed.compareAndSet(null, e)
+                    } finally {
+                        latch.countDown()
                     }
-                    if (!ok) throw IllegalStateException("分片下载失败 @${offset / 1048576}MB")
+                }
+            }
+            latch.await()
+            pool.shutdown()
+
+            failed.get()?.let { throw IllegalStateException("下载失败: ${it.message}", it) }
+            log("下载完成: ${out.length() / 1048576} MB")
+        }
+
+        private fun fetchRange(url: String, start: Long, end: Long, out: File) {
+            val conn = URL(url).openConnection() as HttpURLConnection
+            conn.setRequestProperty("Range", "bytes=$start-$end")
+            conn.connectTimeout = 25000
+            conn.readTimeout = 90000
+            conn.instanceFollowRedirects = true
+            val code = conn.responseCode
+            if (code != 206 && code != 200) throw IllegalStateException("HTTP $code")
+
+            java.io.RandomAccessFile(out, "rw").use { raf ->
+                raf.seek(start)
+                conn.inputStream.use { input ->
+                    val buf = ByteArray(128 * 1024)
+                    var pos = start
+                    while (pos <= end) {
+                        val want = minOf((end - pos + 1).toInt(), buf.size)
+                        val n = input.read(buf, 0, want)
+                        if (n < 0) break
+                        raf.write(buf, 0, n)
+                        pos += n
+                    }
+                    if (pos <= end) throw IllegalStateException("分片不完整 ${pos - start}/${end - start + 1}")
                 }
             }
         }
