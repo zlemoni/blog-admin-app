@@ -100,8 +100,12 @@ class MainActivity : AppCompatActivity() {
             io.execute {
                 if (!ready()) { log("环境未就绪，请先点「安装环境」"); return@execute }
                 val dir = payloadDir()
-                val proot = File(applicationInfo.nativeLibraryDir, "libproot.so")
+                val libDir = File(applicationInfo.nativeLibraryDir)
+                val proot = File(libDir, "libproot.so")
                 if (!proot.exists()) { log("缺少 proot 二进制"); return@execute }
+                listOf("libtalloc.so.2", "libandroid-shmem.so").forEach { dep ->
+                    if (!File(libDir, dep).exists()) log("警告：缺少依赖 $dep")
+                }
 
                 val cmd = listOf(
                     proot.absolutePath,
@@ -122,6 +126,8 @@ class MainActivity : AppCompatActivity() {
                     val pb = ProcessBuilder(cmd)
                     pb.redirectErrorStream(true)
                     pb.environment()["PROOT_NO_SECCOMP"] = "1"
+                    // proot 依赖 libtalloc.so.2 / libandroid-shmem.so，它们和 proot 一起解压在 nativeLibraryDir
+                    pb.environment()["LD_LIBRARY_PATH"] = applicationInfo.nativeLibraryDir
                     val proc = pb.start()
                     proc.inputStream.bufferedReader().use { r ->
                         var line = r.readLine()
