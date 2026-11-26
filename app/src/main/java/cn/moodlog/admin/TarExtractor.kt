@@ -6,7 +6,7 @@ import java.io.OutputStream
 
 /**
  * 极简 tar 解包器（ustar + GNU 长文件名 + pax 头）。
- * 只处理普通文件与目录，忽略链接、设备、权限位。
+ * 只处理普通文件与目录；保留权限位（可执行），忽略链接与设备。
  */
 class TarExtractor(
     private val input: InputStream,
@@ -26,6 +26,7 @@ class TarExtractor(
             val prefix = String(header, 345, 155).trim('\u0000', ' ')
             val type = header[156].toInt().toChar()
             val size = parseSize(header)
+            val mode = parseMode(header)
 
             when (type) {
                 // GNU 长文件名：内容就是完整路径，下一条 header 的 name 是截断版
@@ -74,12 +75,31 @@ class TarExtractor(
                 // 若同名目录已存在，先删掉，避免 EISDIR
                 if (target.exists() && target.isDirectory) target.deleteRecursively()
                 target.outputStream().use { out -> copyN(input, out, size) }
+                // 恢复权限位：尤其 node 等可执行文件必须有 x 位
+                applyMode(target, mode)
                 total += size
                 progress(fullName, size, total, -1)
             } else {
                 skip(size)
             }
             skipPad(size)
+        }
+    }
+
+    private fun parseMode(header: ByteArray): Int {
+        val field = String(header, 100, 8).trim('\u0000', ' ')
+        if (field.isEmpty()) return 0b110100000  // 默认 0640
+        return try { field.toInt(8) } catch (_: NumberFormatException) { 0b110100000 }
+    }
+
+    private fun applyMode(target: File, mode: Int) {
+        try {
+            target.setExecutable((mode and 0b001000000) != 0, true)   // owner exec
+            target.setExecutable((mode and 0b001000000) != 0, false)  // others exec
+            target.setReadable(true, false)
+            target.setWritable((mode and 0b010000000) != 0, true)     // owner write
+        } catch (_: Throwable) {
+            // 权限设置失败不阻断解压
         }
     }
 
