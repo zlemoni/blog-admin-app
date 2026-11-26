@@ -1,5 +1,5 @@
 {
-  "version": "0.5.1-p28",
-  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.5.1-p28/app-debug.apk",
-  "notes": "完整包单文件下载（断点续传），分片作为回退"
+  "version": "0.5.2-p29",
+  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.5.2-p29/app-debug.apk",
+  "notes": "完整包单文件下载，ghfast 优先"
 }
