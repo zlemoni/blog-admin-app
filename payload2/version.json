@@ -1,5 +1,5 @@
 {
-  "version": "0.6.2-p33",
-  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.6.2-p33/app-debug.apk",
-  "notes": "补齐 hosts 与 DNS 配置"
+  "version": "0.6.3-p34",
+  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.6.3-p34/app-debug.apk",
+  "notes": "构建前自动切换图片服务为 passthrough"
 }
