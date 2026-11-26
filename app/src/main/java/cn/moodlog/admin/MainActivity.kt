@@ -15,6 +15,9 @@ import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
 
+/** 分片清单：分片数、总大小、每片大小 */
+data class Manifest(val parts: Int, val size: Long, val sizes: List<Long>)
+
 class MainActivity : AppCompatActivity() {
 
     private lateinit var web: WebView
@@ -508,9 +511,6 @@ class MainActivity : AppCompatActivity() {
             }
             log("全部下载完成: ${got / 1048576} MB")
         }
-
-        /** 清单：分片数、总大小、每片大小 */
-        private data class Manifest(val parts: Int, val size: Long, val sizes: List<Long>)
 
         private fun fetchManifest(): Manifest {
             for (base in mirrors) {
