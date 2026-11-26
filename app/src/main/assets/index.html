@@ -23,8 +23,16 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>心记管理 · P0</h1>
+  <h1>心记管理</h1>
   <p class="sub">这一步验证：解压运行环境 → 本地跑 Astro 构建。</p>
+
+  <div class="card">
+    <div class="row" style="align-items:center">
+      <span style="font-size:13px;color:var(--muted)" id="ver-text">版本 …</span>
+      <button id="btn-update" style="flex:0 0 auto;min-width:auto;padding:8px 12px">检查更新</button>
+    </div>
+    <div id="update-box" style="display:none;margin-top:8px;font-size:13px"></div>
+  </div>
 
   <div class="card">
     <div class="row">
@@ -47,6 +55,29 @@
     logEl.scrollTop = logEl.scrollHeight
   }
   window.__stage = (msg) => { stateEl.textContent = msg }
+  window.__update = (jsonStr) => {
+    try {
+      const d = JSON.parse(jsonStr)
+      const box = document.getElementById('update-box')
+      box.style.display = 'block'
+      document.getElementById('ver-text').textContent = '当前 ' + d.current
+      if (d.hasUpdate) {
+        box.innerHTML = '<div style="margin-bottom:6px">发现新版本 <b>' + d.latest + '</b></div>'
+          + '<button id="btn-dl-mirror" style="min-width:auto;padding:8px 12px">下载（加速镜像）</button> '
+          + '<button id="btn-dl-direct" style="min-width:auto;padding:8px 12px">下载（直链）</button>'
+        document.getElementById('btn-dl-mirror').onclick = () => Native.openLink(d.mirror)
+        document.getElementById('btn-dl-direct').onclick = () => Native.openLink(d.direct)
+      } else {
+        box.textContent = '已是最新版本'
+      }
+    } catch (e) { box.textContent = '解析失败: ' + e }
+  }
+  window.__updateErr = (msg) => {
+    const box = document.getElementById('update-box')
+    box.style.display = 'block'
+    box.textContent = '检查失败: ' + msg
+  }
+
   window.__buildDone = (code) => {
     btnBuild.disabled = false
     btnInstall.disabled = false
@@ -59,6 +90,14 @@
     btnInstall.disabled = true
     try { Native.install() } catch (e) { window.__log('调用失败: ' + e) }
   }
+  document.getElementById('btn-update').onclick = () => {
+    const b = document.getElementById('btn-update')
+    b.disabled = true
+    try { Native.checkUpdate() } catch (e) { window.__updateErr('调用失败') }
+    setTimeout(() => { b.disabled = false }, 1000)
+  }
+  try { document.getElementById('ver-text').textContent = '当前 ' + Native.version() } catch (e) {}
+
   const btnDiag = document.getElementById('btn-diag')
   btnDiag.onclick = () => {
     btnDiag.disabled = true
