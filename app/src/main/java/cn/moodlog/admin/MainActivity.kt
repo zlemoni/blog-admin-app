@@ -56,7 +56,11 @@ class MainActivity : AppCompatActivity() {
     private fun stage(msg: String) = js("window.__stage && window.__stage('$msg')")
 
     private fun payloadDir(): File = File(filesDir, "payload")
-    private fun ready(): Boolean = File(payloadDir(), "rootfs/usr/local/node/bin/node").exists()
+    private val markerFile: File get() = File(filesDir, ".payload-v2")
+
+    // 以「解压完成标记」为准，避免靠单个文件是否存在来猜
+    private fun ready(): Boolean =
+        markerFile.exists() && File(payloadDir(), "rootfs/usr/local/node/bin/node").canExecute()
 
     inner class Bridge {
         @JavascriptInterface
@@ -126,16 +130,20 @@ class MainActivity : AppCompatActivity() {
         fun install() {
             io.execute {
                 try {
-                    // 只有 node 存在且可执行才算真就绪；否则强制重新解压
-                    val nodeFile = File(payloadDir(), "rootfs/usr/local/node/bin/node")
-                    if (nodeFile.exists() && nodeFile.canExecute()) { stage("环境已就绪"); return@execute }
+                    if (ready()) { stage("环境已就绪"); return@execute }
+
                     val dir = payloadDir()
-                    dir.mkdirs()
                     val tgz = File(filesDir, "payload.tar.gz")
 
                     if (!tgz.exists() || tgz.length() < 10_000_000L) {
                         downloadParts(tgz)
                     }
+
+                    // 旧环境可能缺符号链接/权限位，清空后干净重解
+                    markerFile.delete()
+                    File(dir, "rootfs").deleteRecursively()
+                    File(dir, "project").deleteRecursively()
+                    dir.mkdirs()
 
                     stage("解压中…")
                     var lastTick = 0L
@@ -147,8 +155,19 @@ class MainActivity : AppCompatActivity() {
                             }
                         }.extractTo(dir)
                     }
-                    tgz.delete()
-                    stage(if (ready()) "环境就绪" else "解压完成但缺少 node")
+
+                    val node = File(dir, "rootfs/usr/local/node/bin/node")
+                    val loader = File(dir, "rootfs/lib/ld-linux-aarch64.so.1")
+                    when {
+                        !node.exists() -> stage("解压完成但缺少 node")
+                        !node.canExecute() -> stage("解压完成但 node 不可执行")
+                        // File.exists() 会跟随符号链接，/lib 缺失或链接断了都会在这里暴露
+                        !loader.exists() -> stage("解压完成但缺少动态链接器 /lib/ld-linux-aarch64.so.1")
+                        else -> {
+                            markerFile.writeText("ok")
+                            stage("环境就绪")
+                        }
+                    }
                 } catch (e: Throwable) {
                     log("安装失败: ${e.message}")
                     stage("安装失败")
@@ -180,6 +199,18 @@ class MainActivity : AppCompatActivity() {
                 val missing = deps.filter { !File(libDir, it).exists() }
                 if (missing.isNotEmpty()) { stage("✗ 缺少依赖库：${missing.joinToString()}"); return@execute }
                 log("✓ proot 与依赖库齐全")
+
+                // 2.5 动态链接器（node 是 glibc 程序，没有它必然 execve 失败）
+                val loader = File(rootfs, "lib/ld-linux-aarch64.so.1")
+                val libLink = File(rootfs, "lib")
+                log("  /lib ${if (libLink.exists()) "存在" else "缺失"}" +
+                    "${if (java.nio.file.Files.isSymbolicLink(libLink.toPath())) "（符号链接→" +
+                        java.nio.file.Files.readSymbolicLink(libLink.toPath()) + "）" else ""}")
+                if (!loader.exists()) {
+                    stage("✗ 缺少动态链接器 /lib/ld-linux-aarch64.so.1，请点「安装环境」重新解压")
+                    return@execute
+                }
+                log("✓ 动态链接器就位")
 
                 // 3. node 版本
                 stage("检查 node…")
