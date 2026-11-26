@@ -118,6 +118,64 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        /** 应用内下载 APK 并拉起安装器 */
+        @JavascriptInterface
+        fun downloadUpdate(url: String) {
+            io.execute {
+                try {
+                    val dir = java.io.File(getExternalFilesDir(null) ?: filesDir, "update").apply { mkdirs() }
+                    dir.listFiles()?.forEach { it.delete() }
+                    val apk = java.io.File(dir, "update.apk")
+                    stage("下载更新…")
+                    var got = 0L
+                    var total = 0L
+
+                    val conn = URL(url).openConnection() as HttpURLConnection
+                    conn.connectTimeout = 25000
+                    conn.readTimeout = 90000
+                    conn.instanceFollowRedirects = true
+                    conn.setRequestProperty("User-Agent", "blog-admin-app")
+                    total = conn.contentLengthLong
+                    conn.inputStream.use { input ->
+                        apk.outputStream().buffered(1 shl 16).use { os ->
+                            val buf = ByteArray(128 * 1024)
+                            while (true) {
+                                val n = input.read(buf)
+                                if (n < 0) break
+                                os.write(buf, 0, n)
+                                got += n
+                                if (total > 0) stage("下载更新 ${got * 100 / total}%")
+                            }
+                        }
+                    }
+                    stage("下载完成，准备安装")
+                    installApk(apk)
+                } catch (e: Throwable) {
+                    log("更新下载失败: ${e.message}")
+                    stage("更新下载失败")
+                }
+            }
+        }
+
+        private fun installApk(apk: java.io.File) {
+            ui.post {
+                try {
+                    val uri = androidx.core.content.FileProvider.getUriForFile(
+                        this@MainActivity, "cn.moodlog.admin.fileprovider", apk)
+                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                        setDataAndType(uri, "application/vnd.android.package-archive")
+                        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    startActivity(intent)
+                    stage("请在系统安装界面确认")
+                } catch (e: Throwable) {
+                    log("拉起安装器失败: ${e.message}")
+                    stage("拉起安装器失败")
+                }
+            }
+        }
+
         private fun esc(s: String): String =
             s.replace("\\", "\\\\").replace("'", "\\'").replace("\n", " ")
 
@@ -200,6 +258,11 @@ class MainActivity : AppCompatActivity() {
                 if (missing.isNotEmpty()) { stage("✗ 缺少依赖库：${missing.joinToString()}"); return@execute }
                 log("✓ proot 与依赖库齐全")
 
+                // 2.4 proot loader（缺它 proot 无法 exec 任何动态程序）
+                val pl = File(libDir, "libproot-loader.so")
+                if (!pl.exists()) { stage("✗ 缺少 proot loader"); return@execute }
+                log("✓ proot loader 就位")
+
                 // 2.5 动态链接器（node 是 glibc 程序，没有它必然 execve 失败）
                 val loader = File(rootfs, "lib/ld-linux-aarch64.so.1")
                 val libLink = File(rootfs, "lib")
@@ -251,6 +314,11 @@ class MainActivity : AppCompatActivity() {
             // proot 需要可写临时目录来建立 glue rootfs；Termux 编译版硬编码了 Termux 路径，必须显式指定
             val tmpDir = File(filesDir, "tmp").apply { mkdirs() }
             pb.environment()["PROOT_TMP_DIR"] = tmpDir.absolutePath
+            // proot 需要自己的 loader 才能执行 guest 里的动态链接程序（如 node）
+            val loader = File(libDir, "libproot-loader.so")
+            val loader32 = File(libDir, "libproot-loader32.so")
+            if (loader.exists()) pb.environment()["PROOT_LOADER"] = loader.absolutePath
+            if (loader32.exists()) pb.environment()["PROOT_LOADER_32"] = loader32.absolutePath
 
             val proc = pb.start()
             val out = StringBuilder()
