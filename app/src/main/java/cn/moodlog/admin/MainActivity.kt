@@ -84,6 +84,21 @@ class MainActivity : AppCompatActivity() {
             markerFile.readText().trim() == payloadVer &&
             File(payloadDir(), "rootfs/usr/local/node/bin/node").canExecute()
 
+    /** 手机环境没有 sharp(libvips)，把图片服务切到 passthrough，否则构建必失败 */
+    private fun patchImageService(dir: File) {
+        try {
+            val cfg = File(dir, "project/astro.config.ts")
+            if (!cfg.exists()) return
+            val text = cfg.readText()
+            if (!text.contains("astro/assets/services/sharp")) return
+            val patched = text.replace("astro/assets/services/sharp", "astro/assets/services/passthrough")
+            cfg.writeText(patched)
+            log("图片服务已切换为 passthrough（手机无 sharp）")
+        } catch (e: Throwable) {
+            log("配置补丁失败: ${e.message}")
+        }
+    }
+
     /** rootfs 里没有 hosts / resolv.conf 时，Node 解析 localhost 会报 EAI_AGAIN */
     private fun ensureEtc() {
         try {
@@ -558,6 +573,7 @@ class MainActivity : AppCompatActivity() {
                 val libDir = File(applicationInfo.nativeLibraryDir)
                 val proot = File(libDir, "libproot.so")
 
+                patchImageService(dir)
                 stage("正在构建…")
                 val t0 = System.currentTimeMillis()
                 val (_, code) = runProot(dir, libDir, proot, listOf(
