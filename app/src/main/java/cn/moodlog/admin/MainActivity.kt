@@ -475,8 +475,11 @@ class MainActivity : AppCompatActivity() {
                             tmp.inputStream().use { it.read(head) }
                             if (want > 0 && got != want) throw IllegalStateException("大小不符 $got/$want")
                             if (head[0] == '<'.code.toByte()) throw IllegalStateException("返回了 HTML 页面")
+                            // 必须追加写入，否则每片都会清空前面已下载的内容
                             tmp.inputStream().use { input ->
-                                out.outputStream().use { os -> input.copyTo(os, 128 * 1024) }
+                                java.io.FileOutputStream(out, true).use { os ->
+                                    input.copyTo(os, 128 * 1024)
+                                }
                             }
                             tmp.delete()
                             ok = true
