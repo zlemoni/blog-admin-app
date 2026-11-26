@@ -57,8 +57,10 @@ class TarExtractor(
                 // 符号链接：Ubuntu rootfs 依赖 usrmerge（/lib -> usr/lib、/bin -> usr/bin 等）
                 '2' -> {
                     val linkTarget = String(header, 157, 100).trim('\u0000', ' ')
-                    if (fullName.isNotBlank() && linkTarget.isNotBlank()) {
-                        val t = File(dest, fullName)
+                    val fn = pendingName ?: if (prefix.isNotEmpty()) "$prefix/$name" else name
+                    pendingName = null
+                    if (fn.isNotBlank() && linkTarget.isNotBlank()) {
+                        val t = File(dest, fn)
                         t.parentFile?.let { if (!it.exists()) it.mkdirs() }
                         try {
                             if (t.exists() || t.isDirectory) t.deleteRecursively()
