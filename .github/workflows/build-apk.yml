@@ -13,6 +13,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     steps:
       - uses: actions/checkout@v4
 
@@ -21,23 +24,25 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
-
       - uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: '8.7'
 
+      - name: SDK 检查
+        run: |
+          ls $ANDROID_HOME | head
+          ls $ANDROID_HOME/build-tools | tail -3
+
       - name: Download payload
         run: |
-          if [ -f payload/payload.tar.zst ]; then
-            echo "使用仓库内 payload"
-          elif [ -n "${{ vars.PAYLOAD_URL }}" ]; then
+          if [ -n "${{ vars.PAYLOAD_URL }}" ]; then
             echo "从 ${{ vars.PAYLOAD_URL }} 下载"
-            curl -L --retry 3 -o /tmp/payload.tar.zst "${{ vars.PAYLOAD_URL }}"
+            curl -L --retry 3 --max-time 600 -o /tmp/payload.tar.zst "${{ vars.PAYLOAD_URL }}"
             mkdir -p app/src/main/assets
             tar --use-compress-program=unzstd -xf /tmp/payload.tar.zst -C app/src/main/assets
+            du -sh app/src/main/assets
           else
-            echo "没有 payload，构建最小包"
+            echo "未配置 PAYLOAD_URL，构建最小包"
           fi
 
       - name: Build APK
