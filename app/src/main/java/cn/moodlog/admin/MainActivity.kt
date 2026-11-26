@@ -283,11 +283,13 @@ class MainActivity : AppCompatActivity() {
 
                 // 4. astro 模块
                 stage("检查 astro…")
+                val entry = File(project, "node_modules/astro/bin/astro.mjs")
+                if (!entry.exists()) { stage("✗ 缺少 astro 入口 node_modules/astro/bin/astro.mjs"); return@execute }
                 val astro = runProot(dir, libDir, proot, listOf(
-                    "/usr/local/node/bin/node", "-e",
-                    "require('/work/node_modules/astro/astro.js'); console.log('ok')"))
-                if (astro.second != 0) { stage("✗ 无法加载 astro 模块，日志见下"); return@execute }
-                log("✓ astro 模块可加载")
+                    "/usr/local/node/bin/node",
+                    "node_modules/astro/bin/astro.mjs", "--version"))
+                if (astro.second != 0) { stage("✗ astro 无法运行，日志见下"); return@execute }
+                log("✓ astro ${astro.first.trim().take(40)}")
 
                 stage("✓ 自检通过，可以构建")
             }
@@ -310,6 +312,8 @@ class MainActivity : AppCompatActivity() {
             pb.environment()["HOME"] = "/root"
             pb.environment()["PATH"] = "/usr/local/node/bin:/usr/bin:/bin"
             pb.environment()["NODE_OPTIONS"] = "--max-old-space-size=2048"
+            pb.environment()["ASTRO_TELEMETRY_DISABLED"] = "1"
+            pb.environment()["CI"] = "1"
             pb.environment()["LD_LIBRARY_PATH"] = libDir.absolutePath
             // proot 需要可写临时目录来建立 glue rootfs；Termux 编译版硬编码了 Termux 路径，必须显式指定
             val tmpDir = File(filesDir, "tmp").apply { mkdirs() }
@@ -344,7 +348,7 @@ class MainActivity : AppCompatActivity() {
                 val t0 = System.currentTimeMillis()
                 val (_, code) = runProot(dir, libDir, proot, listOf(
                     "/usr/local/node/bin/node",
-                    "node_modules/astro/astro.js", "build"))
+                    "node_modules/astro/bin/astro.mjs", "build"))
                 val secs = (System.currentTimeMillis() - t0) / 1000
                 stage(if (code == 0) "✓ 构建成功（${secs}s）" else "✗ 构建失败（exit $code）")
                 js("window.__buildDone && window.__buildDone($code)")
