@@ -46,6 +46,19 @@ jobs:
             echo "无签名密钥，使用默认 debug 签名"
           fi
 
+      - name: 内置运行环境
+        run: |
+          set -e
+          mkdir -p app/src/main/assets
+          echo "下载完整包到 assets…"
+          curl -L --retry 5 --retry-all-errors --retry-delay 3 --max-time 1800 \
+            -o app/src/main/assets/payload.tar.gz \
+            "https://github.com/zlemoni/blog-admin-app/releases/download/payload-v2/payload-v2.tar.gz"
+          ls -lh app/src/main/assets/payload.tar.gz
+          # 校验是不是 gzip（防止下到 HTML 错误页）
+          head -c 2 app/src/main/assets/payload.tar.gz | od -An -tx1 | tr -d ' \n' | grep -q "1f8b"
+          echo "gzip 校验通过"
+
       - name: Build APK
         env:
           # 依赖下载重试，规避 Maven Central 偶发 429
