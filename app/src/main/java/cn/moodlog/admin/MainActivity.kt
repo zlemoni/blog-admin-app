@@ -135,27 +135,59 @@ class MainActivity : AppCompatActivity() {
         }
 
         private fun download(url: String, out: File) {
-            val conn = URL(url).openConnection() as HttpURLConnection
-            conn.connectTimeout = 20000
-            conn.readTimeout = 60000
-            conn.instanceFollowRedirects = true
-            val total = conn.contentLengthLong
-            var got = 0L
-            conn.inputStream.use { input ->
-                out.outputStream().buffered(1 shl 16).use { os ->
-                    val buf = ByteArray(1 shl 16)
-                    while (true) {
-                        val n = input.read(buf)
-                        if (n < 0) break
-                        os.write(buf, 0, n)
-                        got += n
-                        if (total > 0 && got % (8L * 1024 * 1024) < 65536) {
-                            stage("下载中 ${got * 100 / total}%")
+            val chunk = 4 * 1024 * 1024
+            val total = remoteSize(url)
+            if (total <= 0) throw IllegalStateException("无法获取文件大小")
+            log("文件大小: ${total / 1048576} MB，分片下载")
+            out.delete()
+            java.io.RandomAccessFile(out, "rw").use { raf ->
+                var offset = 0L
+                while (offset < total) {
+                    val end = minOf(offset + chunk - 1, total - 1)
+                    var attempt = 0
+                    var ok = false
+                    while (!ok && attempt < 6) {
+                        try {
+                            val conn = URL(url).openConnection() as HttpURLConnection
+                            conn.setRequestProperty("Range", "bytes=$offset-$end")
+                            conn.connectTimeout = 20000
+                            conn.readTimeout = 60000
+                            conn.instanceFollowRedirects = true
+                            val code = conn.responseCode
+                            if (code != 206 && code != 200) throw IllegalStateException("HTTP $code")
+                            var read = 0L
+                            conn.inputStream.use { input ->
+                                raf.seek(offset)
+                                val buf = ByteArray(64 * 1024)
+                                while (true) {
+                                    val n = input.read(buf)
+                                    if (n < 0) break
+                                    raf.write(buf, 0, n)
+                                    read += n
+                                }
+                            }
+                            if (read == 0L) throw IllegalStateException("空响应")
+                            offset += (end - offset + 1)
+                            ok = true
+                            stage("下载中 ${offset * 100 / total}%")
+                        } catch (e: Throwable) {
+                            attempt++
+                            log("分片重试 $attempt @${offset / 1048576}MB: ${e.message}")
+                            try { Thread.sleep(700L * attempt) } catch (_: InterruptedException) {}
                         }
                     }
+                    if (!ok) throw IllegalStateException("分片下载失败 @${offset / 1048576}MB")
                 }
             }
-            log("下载完成: ${got / 1048576} MB")
+        }
+
+        private fun remoteSize(url: String): Long {
+            val conn = URL(url).openConnection() as HttpURLConnection
+            conn.requestMethod = "HEAD"
+            conn.connectTimeout = 15000
+            conn.readTimeout = 15000
+            conn.instanceFollowRedirects = true
+            return conn.contentLengthLong
         }
     }
 }
