@@ -37,6 +37,7 @@
   <div class="card">
     <div class="row">
       <button id="btn-install">安装环境</button>
+      <button id="btn-clear">清除环境</button>
       <button id="btn-diag">自检</button>
       <button id="btn-build" class="primary">构建</button>
     </div>
@@ -105,6 +106,12 @@
   try { document.getElementById('ver-text').textContent = '当前 ' + Native.version() } catch (e) {}
 
   const btnDiag = document.getElementById('btn-diag')
+  document.getElementById('btn-clear').onclick = () => {
+    if (!confirm('将删除本地已解压的运行环境（约 500 MB），需要重新安装后才能构建。确定继续？')) return
+    logEl.textContent = ''
+    try { Native.clearEnv() } catch (e) { window.__log('调用失败: ' + e) }
+  }
+
   btnDiag.onclick = () => {
     btnDiag.disabled = true
     logEl.textContent = ''
