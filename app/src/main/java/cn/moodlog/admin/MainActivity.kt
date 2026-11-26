@@ -11,6 +11,7 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.Executors
+import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
 
@@ -61,6 +62,63 @@ class MainActivity : AppCompatActivity() {
         @JavascriptInterface
         fun version(): String = BuildConfig.VERSION_NAME
 
+        /** 检查最新版本，返回 JSON 给前端 */
+        @JavascriptInterface
+        fun checkUpdate() {
+            io.execute {
+                try {
+                    val conn = URL("https://api.github.com/repos/zlemoni/blog-admin-app/releases/latest")
+                        .openConnection() as HttpURLConnection
+                    conn.setRequestProperty("Accept", "application/vnd.github+json")
+                    conn.setRequestProperty("User-Agent", "blog-admin-app")
+                    conn.connectTimeout = 20000
+                    conn.readTimeout = 30000
+                    val body = conn.inputStream.bufferedReader().use { it.readText() }
+                    val json = JSONObject(body)
+                    val latest = json.getString("tag_name")
+                    var direct = ""
+                    val assets = json.optJSONArray("assets")
+                    if (assets != null) {
+                        for (i in 0 until assets.length()) {
+                            val a = assets.getJSONObject(i)
+                            if (a.getString("name").endsWith(".apk")) {
+                                direct = a.getString("browser_download_url")
+                                break
+                            }
+                        }
+                    }
+                    val result = JSONObject().apply {
+                        put("current", BuildConfig.VERSION_NAME)
+                        put("latest", latest)
+                        put("hasUpdate", latest != BuildConfig.VERSION_NAME)
+                        put("direct", direct)
+                        put("mirror", "https://gh-proxy.com/" + direct)
+                    }
+                    js("window.__update && window.__update('" + esc(result.toString()) + "')")
+                } catch (e: Throwable) {
+                    js("window.__updateErr && window.__updateErr('" + esc(e.message ?: "检查失败") + "')")
+                }
+            }
+        }
+
+        /** 用系统浏览器打开链接 */
+        @JavascriptInterface
+        fun openLink(url: String) {
+            ui.post {
+                try {
+                    startActivity(android.content.Intent(
+                        android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+                } catch (e: Throwable) {
+                    log("打开链接失败: ${e.message}")
+                }
+            }
+        }
+
+        private fun esc(s: String): String =
+            s.replace("\\", "\\\\").replace("'", "\\'").replace("\n", " ")
+
+
+
         @JavascriptInterface
         fun status(): String = if (ready()) "ready" else "missing"
 
@@ -68,7 +126,9 @@ class MainActivity : AppCompatActivity() {
         fun install() {
             io.execute {
                 try {
-                    if (ready()) { stage("环境已就绪"); return@execute }
+                    // 只有 node 存在且可执行才算真就绪；否则强制重新解压
+                    val nodeFile = File(payloadDir(), "rootfs/usr/local/node/bin/node")
+                    if (nodeFile.exists() && nodeFile.canExecute()) { stage("环境已就绪"); return@execute }
                     val dir = payloadDir()
                     dir.mkdirs()
                     val tgz = File(filesDir, "payload.tar.gz")
