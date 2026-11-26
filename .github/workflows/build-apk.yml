@@ -1,0 +1,57 @@
+name: build-apk
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "发布标签（留空则只上传 artifact）"
+        required: false
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
+
+      - name: Download payload
+        run: |
+          if [ -f payload/payload.tar.zst ]; then
+            echo "使用仓库内 payload"
+          elif [ -n "${{ vars.PAYLOAD_URL }}" ]; then
+            echo "从 ${{ vars.PAYLOAD_URL }} 下载"
+            curl -L --retry 3 -o /tmp/payload.tar.zst "${{ vars.PAYLOAD_URL }}"
+            mkdir -p app/src/main/assets
+            tar --use-compress-program=unzstd -xf /tmp/payload.tar.zst -C app/src/main/assets
+          else
+            echo "没有 payload，构建最小包"
+          fi
+
+      - name: Build APK
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: blog-admin-apk
+          path: app/build/outputs/apk/debug/*.apk
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.tag != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          files: app/build/outputs/apk/debug/*.apk
+          generate_release_notes: true
