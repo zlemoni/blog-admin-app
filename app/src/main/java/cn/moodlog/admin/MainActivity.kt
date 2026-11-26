@@ -115,6 +115,83 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @Volatile private var previewServer: java.net.ServerSocket? = null
+    @Volatile private var previewThread: Thread? = null
+    private val previewPort = 4321
+
+    /** 启动本地预览：把 project/dist 用 HTTP 服务出来 */
+    private fun startPreview(dir: File) {
+        stopPreview()
+        val dist = File(dir, "project/dist")
+        if (!dist.exists()) { stage("还没有产物，请先构建"); return }
+
+        previewThread = Thread {
+            try {
+                val server = java.net.ServerSocket(previewPort, 50, java.net.InetAddress.getByName("127.0.0.1"))
+                previewServer = server
+                log("预览服务已启动: http://127.0.0.1:$previewPort")
+                stage("预览已启动")
+                while (!server.isClosed) {
+                    val sock = try { server.accept() } catch (e: Throwable) { break }
+                    Thread {
+                        try {
+                            sock.use { s ->
+                                val input = s.getInputStream().bufferedReader()
+                                val requestLine = input.readLine() ?: return@use
+                                val path = requestLine.split(" ").getOrNull(1) ?: "/"
+                                while (true) { val h = input.readLine(); if (h.isNullOrEmpty()) break }
+
+                                var rel = java.net.URLDecoder.decode(path.substringBefore('?'), "UTF-8")
+                                if (rel == "/") rel = "/index.html"
+                                var file = File(dist, rel)
+                                if (file.isDirectory) file = File(file, "index.html")
+                                if (!file.exists() && !File(file.path + ".html").exists()) {
+                                    file = File(dist, "404.html")
+                                } else if (!file.exists()) {
+                                    file = File(file.path + ".html")
+                                }
+
+                                val body = if (file.exists()) file.readBytes() else "Not Found".toByteArray()
+                                val mime = when (file.extension.lowercase()) {
+                                    "html" -> "text/html; charset=utf-8"
+                                    "css" -> "text/css; charset=utf-8"
+                                    "js", "mjs" -> "application/javascript; charset=utf-8"
+                                    "json" -> "application/json; charset=utf-8"
+                                    "svg" -> "image/svg+xml"
+                                    "png" -> "image/png"
+                                    "jpg", "jpeg" -> "image/jpeg"
+                                    "webp" -> "image/webp"
+                                    "woff2" -> "font/woff2"
+                                    "xml" -> "application/xml; charset=utf-8"
+                                    "txt" -> "text/plain; charset=utf-8"
+                                    else -> "application/octet-stream"
+                                }
+                                val out = s.getOutputStream()
+                                val head = "HTTP/1.1 200 OK\r\nContent-Type: $mime\r\nContent-Length: ${body.size}\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n"
+                                out.write(head.toByteArray())
+                                out.write(body)
+                                out.flush()
+                            }
+                        } catch (_: Throwable) {}
+                    }.start()
+                }
+            } catch (e: Throwable) {
+                log("预览服务异常: ${e.message}")
+            }
+        }.apply { isDaemon = true; start() }
+    }
+
+    private fun stopPreview() {
+        try { previewServer?.close() } catch (_: Throwable) {}
+        previewServer = null
+        previewThread = null
+    }
+
+    override fun onDestroy() {
+        stopPreview()
+        super.onDestroy()
+    }
+
     /** 统计 dist：页面数、文件数、体积 */
     private fun distSummary(dist: File): String {
         if (!dist.exists()) return "未生成 dist"
@@ -476,6 +553,14 @@ class MainActivity : AppCompatActivity() {
         }
 
         /** 清除本地环境（用户手动调用） */
+        @JavascriptInterface
+        fun preview() {
+            io.execute { startPreview(payloadDir()) }
+        }
+
+        @JavascriptInterface
+        fun previewUrl(): String = "http://127.0.0.1:$previewPort/"
+
         @JavascriptInterface
         fun clearEnv() {
             io.execute {
