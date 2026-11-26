@@ -39,6 +39,8 @@ class MainActivity : AppCompatActivity() {
             settings.domStorageEnabled = true
             settings.allowFileAccess = true
             addJavascriptInterface(Bridge(), "Native")
+            // 没有 WebChromeClient 时 alert/confirm 会被静默吞掉
+            webChromeClient = android.webkit.WebChromeClient()
             loadUrl("file:///android_asset/index.html")
         }
         setContentView(web)
