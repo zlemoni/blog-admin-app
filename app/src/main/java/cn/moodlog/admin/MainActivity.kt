@@ -146,12 +146,13 @@ class MainActivity : AppCompatActivity() {
             parts.forEachIndexed { idx, name ->
                 var ok = false
                 var lastErr: Throwable? = null
+                val baseLen = out.length()
                 outer@ for (base in mirrors) {
                     val url = base + name
                     for (attempt in 1..4) {
                         try {
                             stage("下载 ${idx + 1}/${parts.size}（${totalGot / 1048576} MB）")
-                            val got = fetchTo(out, url)
+                            val got = fetchTo(out, url, baseLen)
                             totalGot += got
                             ok = true
                             log("分片 $name 完成 ${got / 1048576} MB")
@@ -170,8 +171,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         /** 单分片下载（支持断点：按已写入长度续传） */
-        private fun fetchTo(out: File, url: String): Long {
-            val already = out.length()
+        private fun fetchTo(out: File, url: String, baseLen: Long): Long {
+            // 续传偏移必须相对「当前分片」的起点，而不是整个文件的长度
+            val already = (out.length() - baseLen).coerceAtLeast(0L)
             val conn = URL(url).openConnection() as HttpURLConnection
             if (already > 0L) conn.setRequestProperty("Range", "bytes=$already-")
             conn.connectTimeout = 25000
