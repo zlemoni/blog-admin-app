@@ -31,7 +31,18 @@ jobs:
         with:
           gradle-version: '8.7'
 
+      - name: 准备签名
+        if: ${{ secrets.KEYSTORE_B64 != '' }}
+        run: |
+          echo "${{ secrets.KEYSTORE_B64 }}" | base64 -d > $RUNNER_TEMP/blog.jks
+          ls -l $RUNNER_TEMP/blog.jks
+
       - name: Build APK
+        env:
+          KEYSTORE_PATH: ${{ secrets.KEYSTORE_B64 != '' && format('{0}/blog.jks', runner.temp) || '' }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: gradle assembleDebug --no-daemon --stacktrace
 
       - uses: actions/upload-artifact@v4
