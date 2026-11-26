@@ -90,38 +90,73 @@ class MainActivity : AppCompatActivity() {
         fun checkUpdate() {
             io.execute {
                 try {
-                    val conn = URL("https://api.github.com/repos/zlemoni/blog-admin-app/releases/latest")
-                        .openConnection() as HttpURLConnection
-                    conn.setRequestProperty("Accept", "application/vnd.github+json")
-                    conn.setRequestProperty("User-Agent", "blog-admin-app")
-                    conn.connectTimeout = 20000
-                    conn.readTimeout = 30000
-                    val body = conn.inputStream.bufferedReader().use { it.readText() }
-                    val json = JSONObject(body)
-                    val latest = json.getString("tag_name")
-                    var direct = ""
-                    val assets = json.optJSONArray("assets")
-                    if (assets != null) {
-                        for (i in 0 until assets.length()) {
-                            val a = assets.getJSONObject(i)
-                            if (a.getString("name").endsWith(".apk")) {
-                                direct = a.getString("browser_download_url")
-                                break
-                            }
-                        }
-                    }
+                    // 先读 CDN 上的 version.json（不受 GitHub API 限流影响）
+                    val info = fetchVersionInfo()
+                    val latest = info.first
+                    val apkUrl = info.second
+                    val cur = BuildConfig.VERSION_NAME
+                    val has = cmpVersion(latest, cur) > 0
                     val result = JSONObject().apply {
-                        put("current", BuildConfig.VERSION_NAME)
+                        put("current", cur)
                         put("latest", latest)
-                        put("hasUpdate", latest.removePrefix("v") != BuildConfig.VERSION_NAME)
-                        put("direct", direct)
-                        put("mirror", "https://gh-proxy.com/" + direct)
+                        put("hasUpdate", has)
+                        put("direct", apkUrl)
+                        put("mirror", if (apkUrl.startsWith("http")) "https://gh-proxy.com/" + apkUrl else "")
                     }
                     js("window.__update && window.__update('" + esc(result.toString()) + "')")
                 } catch (e: Throwable) {
                     js("window.__updateErr && window.__updateErr('" + esc(e.message ?: "检查失败") + "')")
                 }
             }
+        }
+
+        /** 返回 (最新版本, APK 直链)；先 CDN，后 GitHub API */
+        private fun fetchVersionInfo(): Pair<String, String> {
+            var lastErr: Throwable? = null
+            for (base in mirrors) {
+                try {
+                    val conn = URL(base + "version.json").openConnection() as HttpURLConnection
+                    conn.connectTimeout = 12000
+                    conn.readTimeout = 20000
+                    conn.instanceFollowRedirects = true
+                    val o = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                    return o.getString("version") to o.getString("apk")
+                } catch (e: Throwable) {
+                    lastErr = e
+                }
+            }
+            // 兜底：GitHub API
+            try {
+                val conn = URL("https://api.github.com/repos/zlemoni/blog-admin-app/releases/latest")
+                    .openConnection() as HttpURLConnection
+                conn.setRequestProperty("Accept", "application/vnd.github+json")
+                conn.setRequestProperty("User-Agent", "blog-admin-app")
+                conn.connectTimeout = 15000
+                conn.readTimeout = 25000
+                val o = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                var apk = ""
+                val assets = o.optJSONArray("assets")
+                if (assets != null) for (i in 0 until assets.length()) {
+                    val a = assets.getJSONObject(i)
+                    if (a.getString("name").endsWith(".apk")) { apk = a.getString("browser_download_url"); break }
+                }
+                return o.getString("tag_name").removePrefix("v") to apk
+            } catch (e: Throwable) {
+                throw IllegalStateException("获取版本失败: ${lastErr?.message ?: e.message}")
+            }
+        }
+
+        /** 语义化版本比较：0.4.9-p26 > 0.4.8-p25 */
+        private fun cmpVersion(a: String, b: String): Int {
+            fun nums(v: String) = Regex("\\d+").findAll(v.removePrefix("v"))
+                .map { it.value.toIntOrNull() ?: 0 }.toList()
+            val x = nums(a); val y = nums(b)
+            for (i in 0 until maxOf(x.size, y.size)) {
+                val l = x.getOrElse(i) { 0 }
+                val r = y.getOrElse(i) { 0 }
+                if (l != r) return l.compareTo(r)
+            }
+            return 0
         }
 
         /** 用系统浏览器打开链接 */
@@ -412,67 +447,88 @@ class MainActivity : AppCompatActivity() {
         /** 依次下载 8 个分片并拼接；每个分片带多镜像回退与重试 */
         private fun downloadParts(out: File) {
             val manifest = fetchManifest()
-            val names = partNames(manifest.first)
-            val expectSize = manifest.second
+            val names = partNames(manifest.parts)
+            val expectSize = manifest.size
+            val sizes = manifest.sizes
             log("分片数: ${names.size}，期望大小: ${expectSize / 1048576} MB")
 
             out.delete()
             out.outputStream().use { }
-            var totalGot = 0L
+
             names.forEachIndexed { idx, name ->
+                val want = sizes.getOrElse(idx) { -1L }
                 var ok = false
                 var lastErr: Throwable? = null
-                val baseLen = out.length()
+
                 outer@ for (base in mirrors) {
                     val url = base + name
                     for (attempt in 1..2) {
+                        val tmp = File(filesDir, "part.tmp")
                         try {
-                            stage("下载 ${idx + 1}/${names.size}（${totalGot / 1048576} MB）")
-                            val got = fetchTo(out, url, baseLen)
-                            totalGot += got
+                            stage("下载 ${idx + 1}/${names.size}")
+                            val got = fetchTo(tmp, url, 0L)
+                            // 逐片校验：大小必须与清单一致，且不能是 HTML 错误页
+                            val head = ByteArray(1)
+                            tmp.inputStream().use { it.read(head) }
+                            if (want > 0 && got != want) throw IllegalStateException("大小不符 $got/$want")
+                            if (head[0] == '<'.code.toByte()) throw IllegalStateException("返回了 HTML 页面")
+                            tmp.inputStream().use { input ->
+                                out.outputStream().use { os -> input.copyTo(os, 128 * 1024) }
+                            }
+                            tmp.delete()
                             ok = true
                             log("分片 $name 完成 ${got / 1048576} MB")
                             break@outer
                         } catch (e: Throwable) {
                             lastErr = e
+                            tmp.delete()
                             log("分片 $name 重试 $attempt: ${e.message}")
                             try { Thread.sleep(400L * attempt) } catch (_: InterruptedException) {}
                         }
                     }
-                    val name = when {
+                    val label = when {
                         base.contains("onmicrosoft") -> "渺软 CDN"
                         base.contains("jsdelivr") -> "jsDelivr CDN"
                         base.contains("gh-proxy") -> "gh-proxy 反代"
                         else -> base
                     }
-                    log("切换镜像 → $name")
+                    log("切换镜像 → $label")
                 }
                 if (!ok) throw IllegalStateException("分片 $name 下载失败: ${lastErr?.message}", lastErr)
             }
+
             val got = out.length()
-            if (expectSize > 0 && got != expectSize) {
-                throw IllegalStateException("下载大小不符：$got / $expectSize")
+            if (expectSize > 0 && got != expectSize) throw IllegalStateException("总大小不符：$got / $expectSize")
+            // gzip 魔数校验，杜绝坏包进入解压
+            val magic = ByteArray(2)
+            out.inputStream().use { it.read(magic) }
+            if (magic[0] != 0x1f.toByte() || magic[1] != 0x8b.toByte()) {
+                out.delete()
+                throw IllegalStateException("下载内容不是有效的 gzip 包")
             }
             log("全部下载完成: ${got / 1048576} MB")
         }
 
-        /** 读取分片清单 (分片数, 总大小)；失败时回退到 10 片 */
-        private fun fetchManifest(): Pair<Int, Long> {
+        /** 清单：分片数、总大小、每片大小 */
+        private data class Manifest(val parts: Int, val size: Long, val sizes: List<Long>)
+
+        private fun fetchManifest(): Manifest {
             for (base in mirrors) {
                 try {
                     val conn = URL(base + "manifest.json").openConnection() as HttpURLConnection
-                    conn.connectTimeout = 15000
+                    conn.connectTimeout = 12000
                     conn.readTimeout = 20000
                     conn.instanceFollowRedirects = true
-                    val text = conn.inputStream.bufferedReader().use { it.readText() }
-                    val o = JSONObject(text)
-                    return o.getInt("parts") to o.getLong("size")
+                    val o = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                    val arr = o.optJSONArray("sizes")
+                    val sizes = if (arr != null) (0 until arr.length()).map { arr.getLong(it) } else emptyList()
+                    return Manifest(o.getInt("parts"), o.getLong("size"), sizes)
                 } catch (e: Throwable) {
                     log("清单获取失败(${e.message})，换下一个源")
                 }
             }
-            log("使用默认分片数 10")
-            return 10 to 0L
+            log("清单全部失败，使用默认 10 片")
+            return Manifest(10, 0L, emptyList())
         }
 
         /** 单分片下载（支持断点：按已写入长度续传） */
