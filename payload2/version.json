@@ -1,5 +1,5 @@
 {
-  "version": "0.5.3-p30",
-  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.5.3-p30/app-debug.apk",
-  "notes": "完整包改走 v4.gh-proxy.org"
+  "version": "0.6.0-p31",
+  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.6.0-p31/app-debug.apk",
+  "notes": "运行环境打进 APK，首启动解压"
 }
