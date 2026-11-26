@@ -19,10 +19,12 @@ class MainActivity : AppCompatActivity() {
     private val io = Executors.newSingleThreadExecutor()
     private val ui = Handler(Looper.getMainLooper())
 
-    // 运行环境（首次启动下载），优先精简版，失败回退完整版
-    private val payloadUrls = listOf(
-        "https://c.moodlog.cn/_dl/payload-slim.tar.gz",
-        "https://c.moodlog.cn/_dl/payload-86fz.tar.gz"
+    // 运行环境分片（git 仓库里，走 jsDelivr / gh-proxy 国内可达）
+    private val parts = (0 until 8).map { "part-" + ('a' + it / 26).toChar() + ('a' + it % 26).toChar() }
+    private val mirrors = listOf(
+        "https://cdn.jsdelivr.net/gh/zlemoni/blog-admin-app@main/payload/",
+        "https://gh-proxy.com/https://raw.githubusercontent.com/zlemoni/blog-admin-app/main/payload/",
+        "https://raw.githubusercontent.com/zlemoni/blog-admin-app/main/payload/"
     )
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -71,20 +73,7 @@ class MainActivity : AppCompatActivity() {
                     val tgz = File(filesDir, "payload.tar.gz")
 
                     if (!tgz.exists() || tgz.length() < 10_000_000L) {
-                        var lastErr: Throwable? = null
-                        for (u in payloadUrls) {
-                            try {
-                                stage("下载运行环境…")
-                                log("源: $u")
-                                download(u, tgz)
-                                lastErr = null
-                                break
-                            } catch (e: Throwable) {
-                                lastErr = e
-                                log("该源失败: ${e.message}")
-                            }
-                        }
-                        if (lastErr != null) throw lastErr
+                        downloadParts(tgz)
                     }
 
                     stage("解压中…")
@@ -149,55 +138,61 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        private fun download(url: String, out: File) {
-            val total = remoteSize(url)
-            if (total <= 0) throw IllegalStateException("无法获取文件大小")
-            log("文件大小: ${total / 1048576} MB，4 线程并发下载")
-
+        /** 依次下载 8 个分片并拼接；每个分片带多镜像回退与重试 */
+        private fun downloadParts(out: File) {
             out.delete()
-            java.io.RandomAccessFile(out, "rw").use { raf -> raf.setLength(total) }
-
-            val workers = 4
-            val chunk = 8L * 1024 * 1024
-            val parts = ((total + chunk - 1) / chunk).toInt()
-            val done = java.util.concurrent.atomic.AtomicLong(0)
-            val failed = java.util.concurrent.atomic.AtomicReference<Throwable?>(null)
-
-            val pool = java.util.concurrent.Executors.newFixedThreadPool(workers)
-            val latch = java.util.concurrent.CountDownLatch(parts)
-
-            for (i in 0 until parts) {
-                pool.execute {
-                    try {
-                        val start = i * chunk
-                        val end = minOf(start + chunk - 1, total - 1)
-                        var attempt = 0
-                        while (true) {
-                            try {
-                                fetchRange(url, start, end, out)
-                                done.addAndGet(end - start + 1)
-                                val pct = done.get() * 100 / total
-                                stage("下载中 $pct%")
-                                break
-                            } catch (e: Throwable) {
-                                attempt++
-                                if (attempt >= 8) throw e
-                                log("分片重试 $attempt @${start / 1048576}MB: ${e.message}")
-                                Thread.sleep(500L * attempt)
-                            }
+            out.outputStream().use { }
+            var totalGot = 0L
+            parts.forEachIndexed { idx, name ->
+                var ok = false
+                var lastErr: Throwable? = null
+                outer@ for (base in mirrors) {
+                    val url = base + name
+                    for (attempt in 1..4) {
+                        try {
+                            stage("下载 ${idx + 1}/${parts.size}（${totalGot / 1048576} MB）")
+                            val got = fetchTo(out, url)
+                            totalGot += got
+                            ok = true
+                            log("分片 $name 完成 ${got / 1048576} MB")
+                            break@outer
+                        } catch (e: Throwable) {
+                            lastErr = e
+                            log("分片 $name 重试 $attempt: ${e.message}")
+                            try { Thread.sleep(400L * attempt) } catch (_: InterruptedException) {}
                         }
-                    } catch (e: Throwable) {
-                        failed.compareAndSet(null, e)
-                    } finally {
-                        latch.countDown()
+                    }
+                    log("切换镜像: ${base.substringBefore("/gh/").take(40)}…")
+                }
+                if (!ok) throw IllegalStateException("分片 $name 下载失败: ${lastErr?.message}", lastErr)
+            }
+            log("全部下载完成: ${out.length() / 1048576} MB")
+        }
+
+        /** 单分片下载（支持断点：按已写入长度续传） */
+        private fun fetchTo(out: File, url: String): Long {
+            val already = out.length()
+            val conn = URL(url).openConnection() as HttpURLConnection
+            if (already > 0L) conn.setRequestProperty("Range", "bytes=$already-")
+            conn.connectTimeout = 25000
+            conn.readTimeout = 90000
+            conn.instanceFollowRedirects = true
+            val code = conn.responseCode
+            if (code != 200 && code != 206) throw IllegalStateException("HTTP $code")
+            var got = 0L
+            java.io.FileOutputStream(out, true).use { fos ->
+                conn.inputStream.use { input ->
+                    val buf = ByteArray(128 * 1024)
+                    while (true) {
+                        val n = input.read(buf)
+                        if (n < 0) break
+                        fos.write(buf, 0, n)
+                        got += n
                     }
                 }
             }
-            latch.await()
-            pool.shutdown()
-
-            failed.get()?.let { throw IllegalStateException("下载失败: ${it.message}", it) }
-            log("下载完成: ${out.length() / 1048576} MB")
+            if (got == 0L) throw IllegalStateException("空响应")
+            return got
         }
 
         private fun fetchRange(url: String, start: Long, end: Long, out: File) {
