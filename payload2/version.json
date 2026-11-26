@@ -1,5 +1,5 @@
 {
-  "version": "0.6.3-p34",
-  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.6.3-p34/app-debug.apk",
-  "notes": "构建前自动切换图片服务为 passthrough"
+  "version": "0.6.4-p35",
+  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.6.4-p35/app-debug.apk",
+  "notes": "关闭远程字体提速，构建后显示产物统计"
 }
