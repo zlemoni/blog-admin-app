@@ -28,6 +28,13 @@ class MainActivity : AppCompatActivity() {
     // 分片名由 manifest 决定，避免包大小变化时分片数写死
     private fun partNames(count: Int) =
         (0 until count).map { "part-" + ('a' + it / 26).toChar() + ('a' + it % 26).toChar() }
+    // 完整包（单文件）源，优先使用；失败再回退分片
+    private val fullUrls = listOf(
+        "https://gh-proxy.com/https://github.com/zlemoni/blog-admin-app/releases/download/payload-v2/payload-v2.tar.gz",
+        "https://ghfast.top/https://github.com/zlemoni/blog-admin-app/releases/download/payload-v2/payload-v2.tar.gz",
+        "https://github.com/zlemoni/blog-admin-app/releases/download/payload-v2/payload-v2.tar.gz"
+    )
+
     private val mirrors = listOf(
         // 首选：渺软公益 CDN（jsDelivr 国内加速）
         "https://jsd.onmicrosoft.cn/gh/zlemoni/blog-admin-app@main/payload2/",
@@ -271,7 +278,12 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     if (!tgz.exists() || tgz.length() < 10_000_000L) {
-                        downloadParts(tgz)
+                        try {
+                            downloadFull(tgz)
+                        } catch (e: Throwable) {
+                            log("单文件下载失败(${e.message})，改用分片")
+                            downloadParts(tgz)
+                        }
                     }
 
                     // 旧环境可能缺符号链接/权限位，清空后干净重解
@@ -448,6 +460,72 @@ class MainActivity : AppCompatActivity() {
         }
 
         /** 依次下载 8 个分片并拼接；每个分片带多镜像回退与重试 */
+        /** 完整包下载：支持断点续传，失败换源 */
+        private fun downloadFull(out: File) {
+            out.delete()
+            var lastErr: Throwable? = null
+            for ((i, url) in fullUrls.withIndex()) {
+                val label = when {
+                    url.contains("gh-proxy") -> "gh-proxy"
+                    url.contains("ghfast") -> "ghfast"
+                    else -> "GitHub 直链"
+                }
+                for (attempt in 1..3) {
+                    try {
+                        stage("下载完整包（${label}）")
+                        val total = remoteSize(url)
+                        if (total > 0) log("包大小: ${total / 1048576} MB")
+                        var done = 0L
+                        while (true) {
+                            val already = out.length()
+                            if (total > 0 && already >= total) break
+                            val conn = URL(url).openConnection() as HttpURLConnection
+                            if (already > 0) conn.setRequestProperty("Range", "bytes=$already-")
+                            conn.connectTimeout = 15000
+                            conn.readTimeout = 30000
+                            conn.instanceFollowRedirects = true
+                            conn.setRequestProperty("User-Agent", "blog-admin-app")
+                            val code = conn.responseCode
+                            if (code != 200 && code != 206) throw IllegalStateException("HTTP $code")
+                            val before = already
+                            conn.inputStream.use { input ->
+                                java.io.FileOutputStream(out, true).use { os ->
+                                    val buf = ByteArray(128 * 1024)
+                                    while (true) {
+                                        val n = input.read(buf)
+                                        if (n < 0) break
+                                        os.write(buf, 0, n)
+                                        done = out.length()
+                                        if (total > 0 && done % (8L * 1024 * 1024) < 131072) {
+                                            stage("下载完整包 ${done * 100 / total}%")
+                                        }
+                                    }
+                                }
+                            }
+                            if (out.length() == before) throw IllegalStateException("连接提前结束")
+                            if (total <= 0) break
+                        }
+                        // 校验
+                        val size = out.length()
+                        if (total > 0 && size != total) throw IllegalStateException("大小不符 $size/$total")
+                        val magic = ByteArray(2)
+                        out.inputStream().use { it.read(magic) }
+                        if (magic[0] != 0x1f.toByte() || magic[1] != 0x8b.toByte()) {
+                            throw IllegalStateException("不是有效 gzip 包")
+                        }
+                        log("完整包下载完成: ${size / 1048576} MB")
+                        return
+                    } catch (e: Throwable) {
+                        lastErr = e
+                        log("完整包重试 $attempt（$label）: ${e.message}")
+                        try { Thread.sleep(600L * attempt) } catch (_: InterruptedException) {}
+                    }
+                }
+                if (i < fullUrls.size - 1) log("换下一个源")
+            }
+            throw IllegalStateException("完整包下载失败: ${lastErr?.message}", lastErr)
+        }
+
         private fun downloadParts(out: File) {
             val manifest = fetchManifest()
             val names = partNames(manifest.parts)
