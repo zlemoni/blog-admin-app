@@ -90,7 +90,7 @@ class MainActivity : AppCompatActivity() {
                     val result = JSONObject().apply {
                         put("current", BuildConfig.VERSION_NAME)
                         put("latest", latest)
-                        put("hasUpdate", latest != BuildConfig.VERSION_NAME)
+                        put("hasUpdate", latest.removePrefix("v") != BuildConfig.VERSION_NAME)
                         put("direct", direct)
                         put("mirror", "https://gh-proxy.com/" + direct)
                     }
