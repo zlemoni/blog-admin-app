@@ -26,9 +26,9 @@ class MainActivity : AppCompatActivity() {
     private fun partNames(count: Int) =
         (0 until count).map { "part-" + ('a' + it / 26).toChar() + ('a' + it % 26).toChar() }
     private val mirrors = listOf(
+        // 主用 jsDelivr（国内有节点），备用 gh-proxy 反代
         "https://cdn.jsdelivr.net/gh/zlemoni/blog-admin-app@main/payload2/",
-        "https://gh-proxy.com/https://raw.githubusercontent.com/zlemoni/blog-admin-app/main/payload2/",
-        "https://raw.githubusercontent.com/zlemoni/blog-admin-app/main/payload2/"
+        "https://gh-proxy.com/https://raw.githubusercontent.com/zlemoni/blog-admin-app/main/payload2/"
     )
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -422,7 +422,7 @@ class MainActivity : AppCompatActivity() {
                 val baseLen = out.length()
                 outer@ for (base in mirrors) {
                     val url = base + name
-                    for (attempt in 1..4) {
+                    for (attempt in 1..2) {
                         try {
                             stage("下载 ${idx + 1}/${names.size}（${totalGot / 1048576} MB）")
                             val got = fetchTo(out, url, baseLen)
@@ -436,7 +436,12 @@ class MainActivity : AppCompatActivity() {
                             try { Thread.sleep(400L * attempt) } catch (_: InterruptedException) {}
                         }
                     }
-                    log("切换镜像: ${base.substringBefore("/gh/").take(40)}…")
+                    val name = when {
+                        base.contains("jsdelivr") -> "jsDelivr CDN"
+                        base.contains("gh-proxy") -> "gh-proxy 反代"
+                        else -> base
+                    }
+                    log("切换镜像 → $name")
                 }
                 if (!ok) throw IllegalStateException("分片 $name 下载失败: ${lastErr?.message}", lastErr)
             }
@@ -472,8 +477,8 @@ class MainActivity : AppCompatActivity() {
             val already = (out.length() - baseLen).coerceAtLeast(0L)
             val conn = URL(url).openConnection() as HttpURLConnection
             if (already > 0L) conn.setRequestProperty("Range", "bytes=$already-")
-            conn.connectTimeout = 25000
-            conn.readTimeout = 90000
+            conn.connectTimeout = 12000
+            conn.readTimeout = 30000
             conn.instanceFollowRedirects = true
             val code = conn.responseCode
             if (code != 200 && code != 206) throw IllegalStateException("HTTP $code")
@@ -496,8 +501,8 @@ class MainActivity : AppCompatActivity() {
         private fun fetchRange(url: String, start: Long, end: Long, out: File) {
             val conn = URL(url).openConnection() as HttpURLConnection
             conn.setRequestProperty("Range", "bytes=$start-$end")
-            conn.connectTimeout = 25000
-            conn.readTimeout = 90000
+            conn.connectTimeout = 12000
+            conn.readTimeout = 30000
             conn.instanceFollowRedirects = true
             val code = conn.responseCode
             if (code != 206 && code != 200) throw IllegalStateException("HTTP $code")
