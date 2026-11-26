@@ -157,6 +157,9 @@ class MainActivity : AppCompatActivity() {
             pb.environment()["PATH"] = "/usr/local/node/bin:/usr/bin:/bin"
             pb.environment()["NODE_OPTIONS"] = "--max-old-space-size=2048"
             pb.environment()["LD_LIBRARY_PATH"] = libDir.absolutePath
+            // proot 需要可写临时目录来建立 glue rootfs；Termux 编译版硬编码了 Termux 路径，必须显式指定
+            val tmpDir = File(filesDir, "tmp").apply { mkdirs() }
+            pb.environment()["PROOT_TMP_DIR"] = tmpDir.absolutePath
 
             val proc = pb.start()
             val out = StringBuilder()
