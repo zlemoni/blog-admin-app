@@ -58,7 +58,9 @@ class MainActivity : AppCompatActivity() {
     private fun stage(msg: String) = js("window.__stage && window.__stage('$msg')")
 
     private fun payloadDir(): File = File(filesDir, "payload")
-    private val markerFile: File get() = File(filesDir, ".payload-v3")
+    // 载荷版本：换 Node/依赖时必须改这里，旧环境会被自动清掉重装
+    private val payloadVer = "p2-node2214"
+    private val markerFile: File get() = File(filesDir, ".payload-ver")
 
     // 以「解压完成标记」为准，避免靠单个文件是否存在来猜
     private fun ready(): Boolean =
