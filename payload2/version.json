@@ -1,5 +1,5 @@
 {
-  "version": "0.4.9-p26",
-  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.4.9-p26/app-debug.apk",
-  "notes": "逐片校验下载、更新检测走 CDN、修复安装权限"
+  "version": "0.5.0-p27",
+  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.5.0-p27/app-debug.apk",
+  "notes": "修复分片追加写入"
 }
