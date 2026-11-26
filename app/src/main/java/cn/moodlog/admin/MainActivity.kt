@@ -107,15 +107,13 @@ class MainActivity : AppCompatActivity() {
                     if (!File(libDir, dep).exists()) log("警告：缺少依赖 $dep")
                 }
 
+                // 注意：proot 5.x 不支持 -e 传环境变量，改为进程环境继承
                 val cmd = listOf(
                     proot.absolutePath,
                     "-r", File(dir, "rootfs").absolutePath,
                     "-b", "/proc", "-b", "/dev", "-b", "/sys",
                     "-b", File(dir, "project").absolutePath + ":/work",
                     "-w", "/work",
-                    "-e", "HOME=/root",
-                    "-e", "PATH=/usr/local/node/bin:/usr/bin:/bin",
-                    "-e", "NODE_OPTIONS=--max-old-space-size=2048",
                     "/usr/local/node/bin/node",
                     "node_modules/astro/astro.js", "build"
                 )
@@ -126,6 +124,9 @@ class MainActivity : AppCompatActivity() {
                     val pb = ProcessBuilder(cmd)
                     pb.redirectErrorStream(true)
                     pb.environment()["PROOT_NO_SECCOMP"] = "1"
+                    pb.environment()["HOME"] = "/root"
+                    pb.environment()["PATH"] = "/usr/local/node/bin:/usr/bin:/bin"
+                    pb.environment()["NODE_OPTIONS"] = "--max-old-space-size=2048"
                     // proot 依赖 libtalloc.so.2 / libandroid-shmem.so，它们和 proot 一起解压在 nativeLibraryDir
                     pb.environment()["LD_LIBRARY_PATH"] = applicationInfo.nativeLibraryDir
                     val proc = pb.start()
