@@ -1,0 +1,5 @@
+{
+  "version": "0.4.9-p26",
+  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.4.9-p26/app-debug.apk",
+  "notes": "逐片校验下载、更新检测走 CDN、修复安装权限"
+}
