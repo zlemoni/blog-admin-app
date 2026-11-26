@@ -8,7 +8,8 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import androidx.appcompat.app.AppCompatActivity
 import java.io.File
-import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.concurrent.Executors
 import java.util.zip.GZIPInputStream
 
@@ -17,6 +18,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var web: WebView
     private val io = Executors.newSingleThreadExecutor()
     private val ui = Handler(Looper.getMainLooper())
+
+    // 首次启动时从这里拉运行环境（约 173 MB），之后完全离线
+    private val payloadUrl = "https://c.moodlog.cn/_dl/payload-86fz.tar.gz"
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,54 +56,54 @@ class MainActivity : AppCompatActivity() {
         fun version(): String = BuildConfig.VERSION_NAME
 
         @JavascriptInterface
-        fun status(): String =
-            if (ready()) "ready" else "missing"
+        fun status(): String = if (ready()) "ready" else "missing"
 
-        /** 解压安装包内置的 payload.tar.gz */
         @JavascriptInterface
         fun install() {
             io.execute {
                 try {
                     if (ready()) { stage("环境已就绪"); return@execute }
-                    stage("正在解压运行环境…")
                     val dir = payloadDir()
                     dir.mkdirs()
-                    assets.open("payload.tar.gz").use { raw ->
-                        GZIPInputStream(raw, 1 shl 16).use { gz ->
-                            TarExtractor(gz) { name, size, done, total ->
-                                if (done % (8L * 1024 * 1024) < 65536) {
-                                    val pct = if (total > 0) done * 100 / total else 0
-                                    stage("解压中 $pct%（${done / 1048576} MB）")
-                                }
-                            }.extractTo(dir)
-                        }
+                    val tgz = File(filesDir, "payload.tar.gz")
+
+                    if (!tgz.exists() || tgz.length() < 10_000_000L) {
+                        stage("下载运行环境…")
+                        download(payloadUrl, tgz)
                     }
+
+                    stage("解压中…")
+                    var lastTick = 0L
+                    GZIPInputStream(tgz.inputStream().buffered(1 shl 16), 1 shl 16).use { gz ->
+                        TarExtractor(gz) { _, _, done, _ ->
+                            if (done - lastTick > 16L * 1024 * 1024) {
+                                lastTick = done
+                                stage("解压中 ${done / 1048576} MB")
+                            }
+                        }.extractTo(dir)
+                    }
+                    tgz.delete()
                     stage(if (ready()) "环境就绪" else "解压完成但缺少 node")
                 } catch (e: Throwable) {
-                    log("解压失败: ${e.message}")
-                    stage("解压失败")
+                    log("安装失败: ${e.message}")
+                    stage("安装失败")
                 }
             }
         }
 
-        /** 用 proot 跑 astro build */
         @JavascriptInterface
         fun build() {
             io.execute {
                 if (!ready()) { log("环境未就绪，请先点「安装环境」"); return@execute }
                 val dir = payloadDir()
-                val rootfs = File(dir, "rootfs")
-                val project = File(dir, "project")
                 val proot = File(applicationInfo.nativeLibraryDir, "libproot.so")
                 if (!proot.exists()) { log("缺少 proot 二进制"); return@execute }
 
                 val cmd = listOf(
                     proot.absolutePath,
-                    "-r", rootfs.absolutePath,
-                    "-b", "/proc",
-                    "-b", "/dev",
-                    "-b", "/sys",
-                    "-b", "${project.absolutePath}:/work",
+                    "-r", File(dir, "rootfs").absolutePath,
+                    "-b", "/proc", "-b", "/dev", "-b", "/sys",
+                    "-b", File(dir, "project").absolutePath + ":/work",
                     "-w", "/work",
                     "-e", "HOME=/root",
                     "-e", "PATH=/usr/local/node/bin:/usr/bin:/bin",
@@ -115,22 +119,43 @@ class MainActivity : AppCompatActivity() {
                     pb.redirectErrorStream(true)
                     pb.environment()["PROOT_NO_SECCOMP"] = "1"
                     val proc = pb.start()
-                    proc.inputStream.bufferedReader().use { reader ->
-                        var line = reader.readLine()
-                        while (line != null) {
-                            log(line)
-                            line = reader.readLine()
-                        }
+                    proc.inputStream.bufferedReader().use { r ->
+                        var line = r.readLine()
+                        while (line != null) { log(line); line = r.readLine() }
                     }
                     val code = proc.waitFor()
                     val secs = (System.currentTimeMillis() - t0) / 1000
-                    if (code == 0) stage("构建成功（${secs}s）") else stage("构建失败（exit $code）")
+                    stage(if (code == 0) "构建成功（${secs}s）" else "构建失败（exit $code）")
                     js("window.__buildDone && window.__buildDone($code)")
                 } catch (e: Throwable) {
                     log("执行异常: ${e.message}")
                     stage("执行异常")
                 }
             }
+        }
+
+        private fun download(url: String, out: File) {
+            val conn = URL(url).openConnection() as HttpURLConnection
+            conn.connectTimeout = 20000
+            conn.readTimeout = 60000
+            conn.instanceFollowRedirects = true
+            val total = conn.contentLengthLong
+            var got = 0L
+            conn.inputStream.use { input ->
+                out.outputStream().buffered(1 shl 16).use { os ->
+                    val buf = ByteArray(1 shl 16)
+                    while (true) {
+                        val n = input.read(buf)
+                        if (n < 0) break
+                        os.write(buf, 0, n)
+                        got += n
+                        if (total > 0 && got % (8L * 1024 * 1024) < 65536) {
+                            stage("下载中 ${got * 100 / total}%")
+                        }
+                    }
+                }
+            }
+            log("下载完成: ${got / 1048576} MB")
         }
     }
 }
