@@ -62,7 +62,17 @@ class MainActivity : AppCompatActivity() {
 
     // 以「解压完成标记」为准，避免靠单个文件是否存在来猜
     private fun ready(): Boolean =
-        markerFile.exists() && File(payloadDir(), "rootfs/usr/local/node/bin/node").canExecute()
+        markerFile.exists() &&
+            markerFile.readText().trim() == payloadVer &&
+            File(payloadDir(), "rootfs/usr/local/node/bin/node").canExecute()
+
+    /** 清空本地环境：rootfs、project、压缩包、标记 */
+    private fun wipeEnv() {
+        markerFile.delete()
+        File(filesDir, "payload.tar.gz").delete()
+        File(filesDir, "tmp").deleteRecursively()
+        payloadDir().deleteRecursively()
+    }
 
     inner class Bridge {
         @JavascriptInterface
@@ -209,6 +219,11 @@ class MainActivity : AppCompatActivity() {
 
                     val dir = payloadDir()
                     val tgz = File(filesDir, "payload.tar.gz")
+                    val installedVer = if (markerFile.exists()) markerFile.readText().trim() else ""
+                    if (installedVer != payloadVer) {
+                        log("环境版本 ${installedVer.ifEmpty { "未知" }} → $payloadVer，重新安装")
+                        tgz.delete()   // 旧包作废，强制重新下载
+                    }
 
                     if (!tgz.exists() || tgz.length() < 10_000_000L) {
                         downloadParts(tgz)
@@ -239,7 +254,7 @@ class MainActivity : AppCompatActivity() {
                         // File.exists() 会跟随符号链接，/lib 缺失或链接断了都会在这里暴露
                         !loader.exists() -> stage("解压完成但缺少动态链接器 /lib/ld-linux-aarch64.so.1")
                         else -> {
-                            markerFile.writeText("ok")
+                            markerFile.writeText(payloadVer)
                             stage("环境就绪")
                         }
                     }
@@ -251,6 +266,21 @@ class MainActivity : AppCompatActivity() {
         }
 
         /** 逐步自检：定位环境、proot、依赖、node 每一环是否就绪 */
+        /** 清除本地环境（用户手动调用） */
+        @JavascriptInterface
+        fun clearEnv() {
+            io.execute {
+                try {
+                    stage("正在清除环境…")
+                    wipeEnv()
+                    stage("环境已清除，请重新点「安装环境」")
+                } catch (e: Throwable) {
+                    log("清除失败: ${e.message}")
+                    stage("清除失败")
+                }
+            }
+        }
+
         @JavascriptInterface
         fun diagnose() {
             io.execute {
