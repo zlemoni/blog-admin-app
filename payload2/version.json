@@ -1,5 +1,5 @@
 {
-  "version": "0.5.2-p29",
-  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.5.2-p29/app-debug.apk",
-  "notes": "完整包单文件下载，ghfast 优先"
+  "version": "0.5.3-p30",
+  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.5.3-p30/app-debug.apk",
+  "notes": "完整包改走 v4.gh-proxy.org"
 }
