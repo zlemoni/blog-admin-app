@@ -14,8 +14,8 @@ android {
         applicationId = "cn.moodlog.admin"
         minSdk = 26
         targetSdk = 34
-        versionCode = 31
-        versionName = "0.5.3-p30"
+        versionCode = 32
+        versionName = "0.6.0-p31"
         ndk { abiFilters += "arm64-v8a" }
     }
 
