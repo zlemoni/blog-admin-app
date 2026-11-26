@@ -93,8 +93,7 @@ class MainActivity : AppCompatActivity() {
             hosts.writeText(
                 "127.0.0.1 localhost localhost.localdomain\n" +
                 "::1 localhost ip6-localhost ip6-loopback\n" +
-                "127.0.0.1 android
-"
+                "127.0.0.1 android\n"
             )
             val resolv = File(etc, "resolv.conf")
             resolv.writeText("nameserver 223.5.5.5\nnameserver 119.29.29.29\nnameserver 8.8.8.8\n")
