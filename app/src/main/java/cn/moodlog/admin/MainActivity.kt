@@ -11,6 +11,7 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
 
 class MainActivity : AppCompatActivity() {
@@ -95,6 +96,80 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        /** 逐步自检：定位环境、proot、依赖、node 每一环是否就绪 */
+        @JavascriptInterface
+        fun diagnose() {
+            io.execute {
+                val dir = payloadDir()
+                val libDir = File(applicationInfo.nativeLibraryDir)
+                val proot = File(libDir, "libproot.so")
+                val rootfs = File(dir, "rootfs")
+                val project = File(dir, "project")
+
+                stage("开始自检…")
+
+                // 1. payload
+                if (!rootfs.exists()) { stage("✗ 未解压环境，请先点「安装环境」"); return@execute }
+                val node = File(rootfs, "usr/local/node/bin/node")
+                if (!node.exists()) { stage("✗ 缺少 node 二进制"); return@execute }
+                log("✓ rootfs 与 node 存在")
+
+                // 2. proot 与依赖库
+                if (!proot.exists()) { stage("✗ 缺少 proot"); return@execute }
+                val deps = listOf("libtalloc.so", "libandroid-shmem.so")
+                val missing = deps.filter { !File(libDir, it).exists() }
+                if (missing.isNotEmpty()) { stage("✗ 缺少依赖库：${missing.joinToString()}"); return@execute }
+                log("✓ proot 与依赖库齐全")
+
+                // 3. node 版本
+                stage("检查 node…")
+                val ver = runProot(dir, libDir, proot, listOf("/usr/local/node/bin/node", "--version"))
+                if (ver.second != 0) { stage("✗ node 无法运行，日志见下"); return@execute }
+                log("✓ node ${ver.first.trim()}")
+
+                // 4. astro 模块
+                stage("检查 astro…")
+                val astro = runProot(dir, libDir, proot, listOf(
+                    "/usr/local/node/bin/node", "-e",
+                    "require('/work/node_modules/astro/astro.js'); console.log('ok')"))
+                if (astro.second != 0) { stage("✗ 无法加载 astro 模块，日志见下"); return@execute }
+                log("✓ astro 模块可加载")
+
+                stage("✓ 自检通过，可以构建")
+            }
+        }
+
+        /** 在 proot 里跑一段命令，返回 (输出, 退出码) */
+        private fun runProot(dir: File, libDir: File, proot: File, args: List<String>): Pair<String, Int> {
+            val cmd = mutableListOf(
+                proot.absolutePath,
+                "-r", File(dir, "rootfs").absolutePath,
+                "-b", "/proc", "-b", "/dev", "-b", "/sys",
+                "-b", File(dir, "project").absolutePath + ":/work",
+                "-w", "/work"
+            )
+            cmd.addAll(args)
+
+            val pb = ProcessBuilder(cmd)
+            pb.redirectErrorStream(true)
+            pb.environment()["PROOT_NO_SECCOMP"] = "1"
+            pb.environment()["HOME"] = "/root"
+            pb.environment()["PATH"] = "/usr/local/node/bin:/usr/bin:/bin"
+            pb.environment()["NODE_OPTIONS"] = "--max-old-space-size=2048"
+            pb.environment()["LD_LIBRARY_PATH"] = libDir.absolutePath
+
+            val proc = pb.start()
+            val out = StringBuilder()
+            proc.inputStream.bufferedReader().use { r ->
+                var line = r.readLine()
+                while (line != null) { out.appendLine(line); log(line); line = r.readLine() }
+            }
+            val finished = proc.waitFor(180, TimeUnit.SECONDS)
+            val code = if (finished) proc.exitValue() else -999
+            if (!finished) proc.destroyForcibly()
+            return out.toString() to code
+        }
+
         @JavascriptInterface
         fun build() {
             io.execute {
@@ -102,46 +177,15 @@ class MainActivity : AppCompatActivity() {
                 val dir = payloadDir()
                 val libDir = File(applicationInfo.nativeLibraryDir)
                 val proot = File(libDir, "libproot.so")
-                if (!proot.exists()) { log("缺少 proot 二进制"); return@execute }
-                listOf("libtalloc.so", "libandroid-shmem.so").forEach { dep ->
-                    if (!File(libDir, dep).exists()) log("警告：缺少依赖 $dep")
-                }
-
-                // 注意：proot 5.x 不支持 -e 传环境变量，改为进程环境继承
-                val cmd = listOf(
-                    proot.absolutePath,
-                    "-r", File(dir, "rootfs").absolutePath,
-                    "-b", "/proc", "-b", "/dev", "-b", "/sys",
-                    "-b", File(dir, "project").absolutePath + ":/work",
-                    "-w", "/work",
-                    "/usr/local/node/bin/node",
-                    "node_modules/astro/astro.js", "build"
-                )
 
                 stage("正在构建…")
                 val t0 = System.currentTimeMillis()
-                try {
-                    val pb = ProcessBuilder(cmd)
-                    pb.redirectErrorStream(true)
-                    pb.environment()["PROOT_NO_SECCOMP"] = "1"
-                    pb.environment()["HOME"] = "/root"
-                    pb.environment()["PATH"] = "/usr/local/node/bin:/usr/bin:/bin"
-                    pb.environment()["NODE_OPTIONS"] = "--max-old-space-size=2048"
-                    // proot 依赖 libtalloc.so.2 / libandroid-shmem.so，它们和 proot 一起解压在 nativeLibraryDir
-                    pb.environment()["LD_LIBRARY_PATH"] = applicationInfo.nativeLibraryDir
-                    val proc = pb.start()
-                    proc.inputStream.bufferedReader().use { r ->
-                        var line = r.readLine()
-                        while (line != null) { log(line); line = r.readLine() }
-                    }
-                    val code = proc.waitFor()
-                    val secs = (System.currentTimeMillis() - t0) / 1000
-                    stage(if (code == 0) "构建成功（${secs}s）" else "构建失败（exit $code）")
-                    js("window.__buildDone && window.__buildDone($code)")
-                } catch (e: Throwable) {
-                    log("执行异常: ${e.message}")
-                    stage("执行异常")
-                }
+                val (_, code) = runProot(dir, libDir, proot, listOf(
+                    "/usr/local/node/bin/node",
+                    "node_modules/astro/astro.js", "build"))
+                val secs = (System.currentTimeMillis() - t0) / 1000
+                stage(if (code == 0) "✓ 构建成功（${secs}s）" else "✗ 构建失败（exit $code）")
+                js("window.__buildDone && window.__buildDone($code)")
             }
         }
 
