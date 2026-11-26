@@ -84,6 +84,28 @@ class MainActivity : AppCompatActivity() {
             markerFile.readText().trim() == payloadVer &&
             File(payloadDir(), "rootfs/usr/local/node/bin/node").canExecute()
 
+    /** rootfs 里没有 hosts / resolv.conf 时，Node 解析 localhost 会报 EAI_AGAIN */
+    private fun ensureEtc() {
+        try {
+            val etc = File(payloadDir(), "rootfs/etc")
+            if (!etc.exists()) etc.mkdirs()
+            val hosts = File(etc, "hosts")
+            hosts.writeText(
+                "127.0.0.1 localhost localhost.localdomain\n" +
+                "::1 localhost ip6-localhost ip6-loopback\n" +
+                "127.0.0.1 android
+"
+            )
+            val resolv = File(etc, "resolv.conf")
+            resolv.writeText("nameserver 223.5.5.5\nnameserver 119.29.29.29\nnameserver 8.8.8.8\n")
+            // 证书目录也补齐，避免后续 https 请求失败
+            val ssl = File(payloadDir(), "rootfs/etc/ssl/certs")
+            if (!ssl.exists()) ssl.mkdirs()
+        } catch (e: Throwable) {
+            log("初始化 /etc 失败: ${e.message}")
+        }
+    }
+
     /** 清空本地环境：rootfs、project、压缩包、标记 */
     private fun wipeEnv() {
         markerFile.delete()
@@ -488,6 +510,8 @@ class MainActivity : AppCompatActivity() {
 
         /** 在 proot 里跑一段命令，返回 (输出, 退出码) */
         private fun runProot(dir: File, libDir: File, proot: File, args: List<String>): Pair<String, Int> {
+            ensureEtc()
+
             val cmd = mutableListOf(
                 proot.absolutePath,
                 "-r", File(dir, "rootfs").absolutePath,
