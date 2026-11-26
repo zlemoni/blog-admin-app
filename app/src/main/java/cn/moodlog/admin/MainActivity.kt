@@ -324,6 +324,80 @@ class MainActivity : AppCompatActivity() {
         }
 
         /** 逐步自检：定位环境、proot、依赖、node 每一环是否就绪 */
+        /** 首次启动：内置包解压，完成后通知前端 */
+        @JavascriptInterface
+        fun ensureEnv() {
+            io.execute {
+                try {
+                    if (ready()) {
+                        js("window.__envReady && window.__envReady()")
+                        return@execute
+                    }
+                    val dir = payloadDir()
+                    val tgz = File(filesDir, "payload.tar.gz")
+
+                    // 优先用 APK 内置包，零网络
+                    val bundled = try {
+                        assets.open("payload.tar.gz").use { true }
+                    } catch (e: Throwable) { false }
+
+                    if (!bundled && (!tgz.exists() || tgz.length() < 10_000_000L)) {
+                        stage("正在下载运行环境…")
+                        try { downloadFull(tgz) } catch (e: Throwable) { downloadParts(tgz) }
+                    } else if (bundled) {
+                        stage("正在安装运行环境…")
+                    }
+
+                    markerFile.delete()
+                    File(dir, "rootfs").deleteRecursively()
+                    File(dir, "project").deleteRecursively()
+                    dir.mkdirs()
+
+                    if (bundled) {
+                        assets.open("payload.tar.gz", android.content.res.AssetManager.ACCESS_STREAMING).use { raw ->
+                            GZIPInputStream(raw.buffered(1 shl 16), 1 shl 16).use { gz ->
+                                var lastTick = 0L
+                                TarExtractor(gz) { _, _, done, _ ->
+                                    if (done - lastTick > 16L * 1024 * 1024) {
+                                        lastTick = done
+                                        stage("正在解压 ${done / 1048576} MB")
+                                    }
+                                }.extractTo(dir)
+                            }
+                        }
+                    } else {
+                        GZIPInputStream(tgz.inputStream().buffered(1 shl 16), 1 shl 16).use { gz ->
+                            var lastTick = 0L
+                            TarExtractor(gz) { _, _, done, _ ->
+                                if (done - lastTick > 16L * 1024 * 1024) {
+                                    lastTick = done
+                                    stage("正在解压 ${done / 1048576} MB")
+                                }
+                            }.extractTo(dir)
+                        }
+                        tgz.delete()
+                    }
+
+                    val node = File(dir, "rootfs/usr/local/node/bin/node")
+                    val loader = File(dir, "rootfs/lib/ld-linux-aarch64.so.1")
+                    when {
+                        !node.exists() -> stage("安装失败：缺少 node")
+                        !node.canExecute() -> stage("安装失败：node 不可执行")
+                        !loader.exists() -> stage("安装失败：缺少动态链接器")
+                        else -> {
+                            markerFile.writeText(payloadVer)
+                            stage("环境就绪")
+                            js("window.__envReady && window.__envReady()")
+                        }
+                    }
+                } catch (e: Throwable) {
+                    log("环境安装失败: ${e.message}")
+                    stage("安装失败: ${e.message}")
+                    js("window.__envError && window.__envError('" + esc(e.message ?: "未知错误") + "')")
+                }
+            }
+        }
+
         /** 清除本地环境（用户手动调用） */
         @JavascriptInterface
         fun clearEnv() {
