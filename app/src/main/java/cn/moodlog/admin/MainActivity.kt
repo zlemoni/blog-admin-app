@@ -30,8 +30,9 @@ class MainActivity : AppCompatActivity() {
         (0 until count).map { "part-" + ('a' + it / 26).toChar() + ('a' + it % 26).toChar() }
     // 完整包（单文件）源，优先使用；失败再回退分片
     private val fullUrls = listOf(
-        "https://gh-proxy.com/https://github.com/zlemoni/blog-admin-app/releases/download/payload-v2/payload-v2.tar.gz",
+        // ghfast 实测 ~1.5 MB/s，放第一位
         "https://ghfast.top/https://github.com/zlemoni/blog-admin-app/releases/download/payload-v2/payload-v2.tar.gz",
+        "https://gh-proxy.com/https://github.com/zlemoni/blog-admin-app/releases/download/payload-v2/payload-v2.tar.gz",
         "https://github.com/zlemoni/blog-admin-app/releases/download/payload-v2/payload-v2.tar.gz"
     )
 
@@ -466,8 +467,8 @@ class MainActivity : AppCompatActivity() {
             var lastErr: Throwable? = null
             for ((i, url) in fullUrls.withIndex()) {
                 val label = when {
-                    url.contains("gh-proxy") -> "gh-proxy"
                     url.contains("ghfast") -> "ghfast"
+                    url.contains("gh-proxy") -> "gh-proxy"
                     else -> "GitHub 直链"
                 }
                 for (attempt in 1..3) {
