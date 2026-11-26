@@ -18,11 +18,23 @@
   button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
   button:disabled{opacity:.5}
   .stage{font-size:13px;color:var(--muted);margin:10px 0 0}
+  #splash{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:14px;z-index:99;padding:24px;text-align:center}
+  .spinner{width:44px;height:44px;border:3px solid var(--line);border-top-color:var(--accent);
+    border-radius:50%;animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .splash-title{font-size:16px;font-weight:600}
+  .splash-stage{font-size:13px;color:var(--muted);max-width:80%}
   pre{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;height:46vh;overflow:auto;font:12px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;margin:10px 0 0}
 </style>
 </head>
 <body>
-<div class="wrap">
+<div id="splash">
+  <div class="spinner"></div>
+  <div class="splash-title">正在准备运行环境</div>
+  <div class="splash-stage" id="splash-stage">首次启动需要解压约 500 MB，请勿退出</div>
+</div>
+<div class="wrap" id="main" style="display:none">
   <h1>心记管理</h1>
   <p class="sub">这一步验证：解压运行环境 → 本地跑 Astro 构建。</p>
 
@@ -104,6 +116,29 @@
     setTimeout(() => { b.disabled = false }, 1000)
   }
   try { document.getElementById('ver-text').textContent = '当前 ' + Native.version() } catch (e) {}
+
+  // 启动：先装环境，成功后进主界面
+  window.__envReady = () => {
+    document.getElementById('splash').style.display = 'none'
+    document.getElementById('main').style.display = 'block'
+    stateEl.textContent = '环境就绪'
+  }
+  window.__envError = (msg) => {
+    document.getElementById('splash-stage').textContent = '安装失败：' + msg + '（可点重试）'
+    const b = document.createElement('button')
+    b.textContent = '重试'
+    b.style.cssText = 'margin-top:12px;padding:10px 18px;border-radius:10px;border:1px solid var(--line);background:var(--accent);color:#fff'
+    b.onclick = () => location.reload()
+    document.getElementById('splash').appendChild(b)
+  }
+  const splashStage = document.getElementById('splash-stage')
+  window.__stage = (msg) => {
+    stateEl.textContent = msg
+    if (splashStage) splashStage.textContent = msg
+  }
+  try { Native.ensureEnv() } catch (e) {
+    document.getElementById('splash-stage').textContent = '调用失败: ' + e
+  }
 
   const btnDiag = document.getElementById('btn-diag')
   // 两步确认，不依赖系统弹窗
