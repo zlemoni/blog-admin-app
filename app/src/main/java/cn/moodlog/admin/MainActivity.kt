@@ -336,10 +336,21 @@ class MainActivity : AppCompatActivity() {
                     val dir = payloadDir()
                     val tgz = File(filesDir, "payload.tar.gz")
 
-                    // 优先用 APK 内置包，零网络
-                    val bundled = try {
-                        assets.open("payload.tar.gz").use { true }
+                    // 优先用 APK 内置包，零网络。
+                    // 注意：AAPT2 会把 .gz 资源解压并改名（payload.tar.gz → payload.tar），
+                    // 所以这里按实际存在的名字取，并区分是否还是 gzip。
+                    fun assetExists(n: String): Boolean = try {
+                        assets.open(n).use { true }
                     } catch (e: Throwable) { false }
+
+                    val assetName = when {
+                        assetExists("payload.bin") -> "payload.bin"
+                        assetExists("payload.tar.gz") -> "payload.tar.gz"
+                        assetExists("payload.tar") -> "payload.tar"
+                        else -> null
+                    }
+                    val bundled = assetName != null
+                    if (bundled) log("使用内置包: $assetName")
 
                     if (!bundled && (!tgz.exists() || tgz.length() < 10_000_000L)) {
                         stage("正在下载运行环境…")
@@ -354,16 +365,17 @@ class MainActivity : AppCompatActivity() {
                     dir.mkdirs()
 
                     if (bundled) {
-                        assets.open("payload.tar.gz", android.content.res.AssetManager.ACCESS_STREAMING).use { raw ->
-                            GZIPInputStream(raw.buffered(1 shl 16), 1 shl 16).use { gz ->
-                                var lastTick = 0L
-                                TarExtractor(gz) { _, _, done, _ ->
-                                    if (done - lastTick > 16L * 1024 * 1024) {
-                                        lastTick = done
-                                        stage("正在解压 ${done / 1048576} MB")
-                                    }
-                                }.extractTo(dir)
-                            }
+                        assets.open(assetName!!, android.content.res.AssetManager.ACCESS_STREAMING).use { raw ->
+                            // payload.tar 是裸 tar（AAPT 已解压过），其余仍是 gzip
+                            val stream = if (assetName!!.endsWith(".tar")) raw.buffered(1 shl 16)
+                                         else GZIPInputStream(raw.buffered(1 shl 16), 1 shl 16)
+                            var lastTick = 0L
+                            TarExtractor(stream) { _, _, done, _ ->
+                                if (done - lastTick > 16L * 1024 * 1024) {
+                                    lastTick = done
+                                    stage("正在解压 ${done / 1048576} MB")
+                                }
+                            }.extractTo(dir)
                         }
                     } else {
                         GZIPInputStream(tgz.inputStream().buffered(1 shl 16), 1 shl 16).use { gz ->
