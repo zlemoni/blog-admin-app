@@ -52,11 +52,11 @@ jobs:
           mkdir -p app/src/main/assets
           echo "下载完整包到 assets…"
           curl -L --retry 5 --retry-all-errors --retry-delay 3 --max-time 1800 \
-            -o app/src/main/assets/payload.tar.gz \
+            -o app/src/main/assets/payload.bin \
             "https://github.com/zlemoni/blog-admin-app/releases/download/payload-v2/payload-v2.tar.gz"
-          ls -lh app/src/main/assets/payload.tar.gz
+          ls -lh app/src/main/assets/payload.bin
           # 校验是不是 gzip（防止下到 HTML 错误页）
-          head -c 2 app/src/main/assets/payload.tar.gz | od -An -tx1 | tr -d ' \n' | grep -q "1f8b"
+          head -c 2 app/src/main/assets/payload.bin | od -An -tx1 | tr -d ' \n' | grep -q "1f8b"
           echo "gzip 校验通过"
 
       - name: Build APK
