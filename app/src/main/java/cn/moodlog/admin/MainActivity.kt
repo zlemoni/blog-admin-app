@@ -84,19 +84,48 @@ class MainActivity : AppCompatActivity() {
             markerFile.readText().trim() == payloadVer &&
             File(payloadDir(), "rootfs/usr/local/node/bin/node").canExecute()
 
-    /** 手机环境没有 sharp(libvips)，把图片服务切到 passthrough，否则构建必失败 */
+    /** 构建前修补配置：sharp → passthrough；关闭远程字体（大陆拉不到，会卡 2 分钟） */
     private fun patchImageService(dir: File) {
         try {
             val cfg = File(dir, "project/astro.config.ts")
             if (!cfg.exists()) return
-            val text = cfg.readText()
-            if (!text.contains("astro/assets/services/sharp")) return
-            val patched = text.replace("astro/assets/services/sharp", "astro/assets/services/passthrough")
-            cfg.writeText(patched)
-            log("图片服务已切换为 passthrough（手机无 sharp）")
+            var text = cfg.readText()
+            var changed = false
+
+            if (text.contains("astro/assets/services/sharp")) {
+                text = text.replace("astro/assets/services/sharp", "astro/assets/services/passthrough")
+                log("图片服务已切换为 passthrough（手机无 sharp）")
+                changed = true
+            }
+
+            if (text.contains("fontProviders.fontshare")) {
+                // 整个 fonts 数组置空，避免构建时联网取字体
+                val re = Regex("fonts:\\s*\\[[\\s\\S]*?\\n  \\],")
+                val replaced = re.replaceFirst(text, "fonts: [],")
+                if (replaced != text) {
+                    text = replaced
+                    log("已关闭远程字体（fontshare 无法访问）")
+                    changed = true
+                }
+            }
+
+            if (changed) cfg.writeText(text)
         } catch (e: Throwable) {
             log("配置补丁失败: ${e.message}")
         }
+    }
+
+    /** 统计 dist：页面数、文件数、体积 */
+    private fun distSummary(dist: File): String {
+        if (!dist.exists()) return "未生成 dist"
+        var files = 0; var pages = 0; var bytes = 0L
+        dist.walkTopDown().forEach { f ->
+            if (f.isFile) {
+                files++; bytes += f.length()
+                if (f.name.endsWith(".html")) pages++
+            }
+        }
+        return "$pages 页 / $files 文件 / ${bytes / 1048576} MB"
     }
 
     /** rootfs 里没有 hosts / resolv.conf 时，Node 解析 localhost 会报 EAI_AGAIN */
@@ -580,7 +609,12 @@ class MainActivity : AppCompatActivity() {
                     "/usr/local/node/bin/node",
                     "node_modules/astro/bin/astro.mjs", "build"))
                 val secs = (System.currentTimeMillis() - t0) / 1000
-                stage(if (code == 0) "✓ 构建成功（${secs}s）" else "✗ 构建失败（exit $code）")
+                if (code == 0) {
+                    log("产物: ${distSummary(File(dir, "project/dist"))}")
+                    stage("✓ 构建成功（${secs}s）")
+                } else {
+                    stage("✗ 构建失败（exit $code）")
+                }
                 js("window.__buildDone && window.__buildDone($code)")
             }
         }
