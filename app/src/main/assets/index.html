@@ -5,37 +5,63 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>心记管理 · P0</title>
 <style>
-  :root { color-scheme: light dark; --bg:#f6f7f9; --card:#fff; --line:#e5e7eb; --text:#1f2328; --muted:#6b7280; --accent:#2563eb; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#0b0b10; --card:#16161c; --line:#2a2a33; --text:#f4f4f5; --muted:#9ca3af; } }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif; }
-  .wrap { max-width:640px; margin:0 auto; padding:20px 16px 40px; }
-  h1 { font-size:18px; margin:8px 0 4px; }
-  p.sub { color:var(--muted); font-size:13px; margin:0 0 20px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:12px; }
-  button { width:100%; padding:12px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--text); font:inherit; font-weight:600; }
-  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
-  pre { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px; overflow:auto; font-size:12px; white-space:pre-wrap; margin:10px 0 0; }
+  :root{--bg:#f6f7f9;--card:#fff;--line:#e5e7eb;--text:#1f2328;--muted:#6b7280;--accent:#2563eb}
+  @media (prefers-color-scheme:dark){:root{--bg:#0b0b10;--card:#16161c;--line:#2a2a33;--text:#f4f4f5;--muted:#9ca3af}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:720px;margin:0 auto;padding:18px 14px 40px}
+  h1{font-size:18px;margin:4px 0 2px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  button{flex:1;min-width:140px;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);font:inherit;font-weight:600}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button:disabled{opacity:.5}
+  .stage{font-size:13px;color:var(--muted);margin:10px 0 0}
+  pre{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;height:46vh;overflow:auto;font:12px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;margin:10px 0 0}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>心记管理 · P0</h1>
-  <p class="sub">这一步只验证：原生桥接是否可用、后续能否跑起构建环境。</p>
+  <p class="sub">这一步验证：解压运行环境 → 本地跑 Astro 构建。</p>
 
   <div class="card">
-    <button class="primary" id="btn-ping">测试原生桥接</button>
-    <pre id="out">等待测试…</pre>
+    <div class="row">
+      <button id="btn-install">安装环境</button>
+      <button id="btn-build" class="primary">构建</button>
+    </div>
+    <p class="stage" id="stage">状态：<span id="state">未知</span></p>
+    <pre id="log"></pre>
   </div>
 </div>
 <script>
-  const out = document.getElementById('out')
-  document.getElementById('btn-ping').onclick = () => {
-    try {
-      out.textContent = 'native: ' + Native.ping() + '  version: ' + Native.version()
-    } catch (e) {
-      out.textContent = '桥接调用失败: ' + e
-    }
+  const logEl = document.getElementById('log')
+  const stateEl = document.getElementById('state')
+  const btnInstall = document.getElementById('btn-install')
+  const btnBuild = document.getElementById('btn-build')
+
+  window.__log = (line) => {
+    logEl.textContent += line + '\n'
+    logEl.scrollTop = logEl.scrollHeight
+  }
+  window.__stage = (msg) => { stateEl.textContent = msg }
+  window.__buildDone = (code) => {
+    btnBuild.disabled = false
+    btnInstall.disabled = false
+    window.__log('--- exit ' + code + ' ---')
+  }
+
+  try { stateEl.textContent = Native.status() } catch (e) { stateEl.textContent = '桥接失败' }
+
+  btnInstall.onclick = () => {
+    btnInstall.disabled = true
+    try { Native.install() } catch (e) { window.__log('调用失败: ' + e) }
+  }
+  btnBuild.onclick = () => {
+    btnBuild.disabled = true
+    logEl.textContent = ''
+    try { Native.build() } catch (e) { window.__log('调用失败: ' + e) }
   }
 </script>
 </body>
