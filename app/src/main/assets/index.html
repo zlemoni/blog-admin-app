@@ -106,9 +106,32 @@
   try { document.getElementById('ver-text').textContent = '当前 ' + Native.version() } catch (e) {}
 
   const btnDiag = document.getElementById('btn-diag')
-  document.getElementById('btn-clear').onclick = () => {
-    if (!confirm('将删除本地已解压的运行环境（约 500 MB），需要重新安装后才能构建。确定继续？')) return
+  // 两步确认，不依赖系统弹窗
+  let clearArmed = false
+  let clearTimer = null
+  const btnClear = document.getElementById('btn-clear')
+  btnClear.onclick = () => {
+    if (!clearArmed) {
+      clearArmed = true
+      btnClear.textContent = '再点一次确认'
+      btnClear.style.borderColor = '#dc2626'
+      btnClear.style.color = '#dc2626'
+      clearTimeout(clearTimer)
+      clearTimer = setTimeout(() => {
+        clearArmed = false
+        btnClear.textContent = '清除环境'
+        btnClear.style.borderColor = ''
+        btnClear.style.color = ''
+      }, 5000)
+      return
+    }
+    clearArmed = false
+    clearTimeout(clearTimer)
+    btnClear.textContent = '清除环境'
+    btnClear.style.borderColor = ''
+    btnClear.style.color = ''
     logEl.textContent = ''
+    window.__log('开始清除环境…')
     try { Native.clearEnv() } catch (e) { window.__log('调用失败: ' + e) }
   }
 
