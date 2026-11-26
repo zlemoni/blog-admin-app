@@ -29,6 +29,7 @@
   <div class="card">
     <div class="row">
       <button id="btn-install">安装环境</button>
+      <button id="btn-diag">自检</button>
       <button id="btn-build" class="primary">构建</button>
     </div>
     <p class="stage" id="stage">状态：<span id="state">未知</span></p>
@@ -57,6 +58,13 @@
   btnInstall.onclick = () => {
     btnInstall.disabled = true
     try { Native.install() } catch (e) { window.__log('调用失败: ' + e) }
+  }
+  const btnDiag = document.getElementById('btn-diag')
+  btnDiag.onclick = () => {
+    btnDiag.disabled = true
+    logEl.textContent = ''
+    try { Native.diagnose() } catch (e) { window.__log('调用失败: ' + e) }
+    setTimeout(() => { btnDiag.disabled = false }, 500)
   }
   btnBuild.onclick = () => {
     btnBuild.disabled = true
