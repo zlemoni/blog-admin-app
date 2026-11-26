@@ -52,6 +52,7 @@
       <button id="btn-clear">清除环境</button>
       <button id="btn-diag">自检</button>
       <button id="btn-build" class="primary">构建</button>
+      <button id="btn-preview">预览</button>
     </div>
     <p class="stage" id="stage">状态：<span id="state">未知</span></p>
     <pre id="log"></pre>
@@ -176,6 +177,14 @@
     try { Native.diagnose() } catch (e) { window.__log('调用失败: ' + e) }
     setTimeout(() => { btnDiag.disabled = false }, 500)
   }
+  document.getElementById('btn-preview').onclick = () => {
+    try {
+      Native.preview()
+      const url = Native.previewUrl()
+      setTimeout(() => { window.location.href = url }, 600)
+    } catch (e) { window.__log('预览失败: ' + e) }
+  }
+
   btnBuild.onclick = () => {
     btnBuild.disabled = true
     logEl.textContent = ''
