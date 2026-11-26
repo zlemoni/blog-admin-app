@@ -14,13 +14,20 @@ android {
         applicationId = "cn.moodlog.admin"
         minSdk = 26
         targetSdk = 34
-        versionCode = 8
-        versionName = "0.2.6-p7"
+        versionCode = 9
+        versionName = "0.2.7-p8"
         ndk { abiFilters += "arm64-v8a" }
     }
 
     androidResources {
         noCompress += listOf("tar.gz")
+    }
+
+    // 关键：把 jniLibs 解压到磁盘，proot 才能被执行
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
     }
 
     signingConfigs {
