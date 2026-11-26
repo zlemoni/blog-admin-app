@@ -14,8 +14,8 @@ android {
         applicationId = "cn.moodlog.admin"
         minSdk = 26
         targetSdk = 34
-        versionCode = 17
-        versionName = "0.3.5-p16"
+        versionCode = 18
+        versionName = "0.4.0-p17"
         ndk { abiFilters += "arm64-v8a" }
     }
 
@@ -65,4 +65,5 @@ android {
 dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.webkit:webkit:1.11.0")
+    implementation("androidx.core:core-ktx:1.13.1")
 }
