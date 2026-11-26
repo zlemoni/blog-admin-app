@@ -3,6 +3,9 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+val ksPath = System.getenv("KEYSTORE_PATH")
+val hasKeystore = ksPath != null && file(ksPath).exists()
+
 android {
     namespace = "cn.moodlog.admin"
     compileSdk = 34
@@ -11,8 +14,8 @@ android {
         applicationId = "cn.moodlog.admin"
         minSdk = 26
         targetSdk = 34
-        versionCode = 7
-        versionName = "0.2.5-p6"
+        versionCode = 8
+        versionName = "0.2.6-p7"
         ndk { abiFilters += "arm64-v8a" }
     }
 
@@ -20,12 +23,29 @@ android {
         noCompress += listOf("tar.gz")
     }
 
+    signingConfigs {
+        if (hasKeystore) {
+            create("app") {
+                storeFile = file(ksPath!!)
+                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
+                keyAlias = System.getenv("KEY_ALIAS") ?: "blog"
+                keyPassword = System.getenv("KEY_PASSWORD") ?: ""
+            }
+        }
+    }
+
     buildFeatures {
         buildConfig = true
     }
 
     buildTypes {
-        release { isMinifyEnabled = false }
+        debug {
+            if (hasKeystore) signingConfig = signingConfigs.getByName("app")
+        }
+        release {
+            isMinifyEnabled = false
+            if (hasKeystore) signingConfig = signingConfigs.getByName("app")
+        }
     }
 
     compileOptions {
