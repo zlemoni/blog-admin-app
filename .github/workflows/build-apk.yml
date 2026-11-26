@@ -31,21 +31,19 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      - name: SDK 检查
+      - name: 获取构建载荷
         run: |
-          ls $ANDROID_HOME | head
-          ls $ANDROID_HOME/build-tools | tail -3
-
-      - name: Download payload
-        run: |
-          if [ -n "${{ vars.PAYLOAD_URL }}" ]; then
-            echo "从 ${{ vars.PAYLOAD_URL }} 下载"
-            curl -L --retry 3 --max-time 600 -o /tmp/payload.tar.zst "${{ vars.PAYLOAD_URL }}"
-            mkdir -p app/src/main/assets
-            tar --use-compress-program=unzstd -xf /tmp/payload.tar.zst -C app/src/main/assets
-            du -sh app/src/main/assets
-          else
-            echo "未配置 PAYLOAD_URL，构建最小包"
+          set -e
+          if [ -z "${{ vars.PAYLOAD_URL }}" ]; then echo "缺少 PAYLOAD_URL"; exit 1; fi
+          mkdir -p app/src/main/assets app/src/main/jniLibs/arm64-v8a
+          echo "下载 payload…"
+          curl -L --retry 3 --max-time 1800 -o app/src/main/assets/payload.tar.gz "${{ vars.PAYLOAD_URL }}"
+          ls -lh app/src/main/assets/payload.tar.gz
+          if [ -n "${{ vars.PROOT_URL }}" ]; then
+            echo "下载 proot…"
+            curl -L --retry 3 --max-time 300 -o app/src/main/jniLibs/arm64-v8a/libproot.so "${{ vars.PROOT_URL }}"
+            chmod +x app/src/main/jniLibs/arm64-v8a/libproot.so
+            ls -lh app/src/main/jniLibs/arm64-v8a/libproot.so
           fi
 
       - name: Build APK
