@@ -22,7 +22,9 @@ class MainActivity : AppCompatActivity() {
     private val ui = Handler(Looper.getMainLooper())
 
     // 运行环境分片（git 仓库里，走 jsDelivr / gh-proxy 国内可达）
-    private val parts = (0 until 9).map { "part-" + ('a' + it / 26).toChar() + ('a' + it % 26).toChar() }
+    // 分片名由 manifest 决定，避免包大小变化时分片数写死
+    private fun partNames(count: Int) =
+        (0 until count).map { "part-" + ('a' + it / 26).toChar() + ('a' + it % 26).toChar() }
     private val mirrors = listOf(
         "https://cdn.jsdelivr.net/gh/zlemoni/blog-admin-app@main/payload2/",
         "https://gh-proxy.com/https://raw.githubusercontent.com/zlemoni/blog-admin-app/main/payload2/",
@@ -372,10 +374,15 @@ class MainActivity : AppCompatActivity() {
 
         /** 依次下载 8 个分片并拼接；每个分片带多镜像回退与重试 */
         private fun downloadParts(out: File) {
+            val manifest = fetchManifest()
+            val names = partNames(manifest.first)
+            val expectSize = manifest.second
+            log("分片数: ${names.size}，期望大小: ${expectSize / 1048576} MB")
+
             out.delete()
             out.outputStream().use { }
             var totalGot = 0L
-            parts.forEachIndexed { idx, name ->
+            names.forEachIndexed { idx, name ->
                 var ok = false
                 var lastErr: Throwable? = null
                 val baseLen = out.length()
@@ -383,7 +390,7 @@ class MainActivity : AppCompatActivity() {
                     val url = base + name
                     for (attempt in 1..4) {
                         try {
-                            stage("下载 ${idx + 1}/${parts.size}（${totalGot / 1048576} MB）")
+                            stage("下载 ${idx + 1}/${names.size}（${totalGot / 1048576} MB）")
                             val got = fetchTo(out, url, baseLen)
                             totalGot += got
                             ok = true
@@ -399,7 +406,30 @@ class MainActivity : AppCompatActivity() {
                 }
                 if (!ok) throw IllegalStateException("分片 $name 下载失败: ${lastErr?.message}", lastErr)
             }
-            log("全部下载完成: ${out.length() / 1048576} MB")
+            val got = out.length()
+            if (expectSize > 0 && got != expectSize) {
+                throw IllegalStateException("下载大小不符：$got / $expectSize")
+            }
+            log("全部下载完成: ${got / 1048576} MB")
+        }
+
+        /** 读取分片清单 (分片数, 总大小)；失败时回退到 10 片 */
+        private fun fetchManifest(): Pair<Int, Long> {
+            for (base in mirrors) {
+                try {
+                    val conn = URL(base + "manifest.json").openConnection() as HttpURLConnection
+                    conn.connectTimeout = 15000
+                    conn.readTimeout = 20000
+                    conn.instanceFollowRedirects = true
+                    val text = conn.inputStream.bufferedReader().use { it.readText() }
+                    val o = JSONObject(text)
+                    return o.getInt("parts") to o.getLong("size")
+                } catch (e: Throwable) {
+                    log("清单获取失败(${e.message})，换下一个源")
+                }
+            }
+            log("使用默认分片数 10")
+            return 10 to 0L
         }
 
         /** 单分片下载（支持断点：按已写入长度续传） */
