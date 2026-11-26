@@ -26,8 +26,11 @@ class MainActivity : AppCompatActivity() {
     private fun partNames(count: Int) =
         (0 until count).map { "part-" + ('a' + it / 26).toChar() + ('a' + it % 26).toChar() }
     private val mirrors = listOf(
-        // 主用 jsDelivr（国内有节点），备用 gh-proxy 反代
+        // 首选：渺软公益 CDN（jsDelivr 国内加速）
+        "https://jsd.onmicrosoft.cn/gh/zlemoni/blog-admin-app@main/payload2/",
+        // 备用：jsDelivr 官方
         "https://cdn.jsdelivr.net/gh/zlemoni/blog-admin-app@main/payload2/",
+        // 兜底：gh-proxy 反代
         "https://gh-proxy.com/https://raw.githubusercontent.com/zlemoni/blog-admin-app/main/payload2/"
     )
 
@@ -437,6 +440,7 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     val name = when {
+                        base.contains("onmicrosoft") -> "渺软 CDN"
                         base.contains("jsdelivr") -> "jsDelivr CDN"
                         base.contains("gh-proxy") -> "gh-proxy 反代"
                         else -> base
