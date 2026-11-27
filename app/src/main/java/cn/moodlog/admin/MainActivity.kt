@@ -128,6 +128,9 @@ class MainActivity : AppCompatActivity() {
                         val t0 = f.readText()
                         val t1 = t0.replace(Regex("<Font\\b[\\s\\S]*?/>"), "")
                                      .replace(Regex("<Font\\b[\\s\\S]*?</Font>"), "")
+                                     // 字体变量已无定义，换成系统字体栈
+                                     .replace("var(--font-satoshi)",
+                                              "-apple-system, \"SF Pro Text\", \"PingFang SC\", Roboto, \"Noto Sans SC\", sans-serif")
                         if (t1 != t0) { f.writeText(t1); removed++ }
                     }
                     if (removed > 0) log("已移除 $removed 个 <Font> 组件（改用系统字体）")
