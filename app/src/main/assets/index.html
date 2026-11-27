@@ -14,6 +14,7 @@
     --accent:#0071e3; --accent-soft:rgba(0,113,227,.12);
     --danger:#ff3b30; --good:#34c759;
     --shadow:0 12px 40px rgba(0,0,0,.10);
+    --r-card:20px; --gap:14px;
   }
   @media (prefers-color-scheme:dark){
     :root{
@@ -29,7 +30,7 @@
   html,body{height:100%}
   body{
     margin:0;color:var(--text);
-    font:16px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",sans-serif;
+    font:16px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC",sans-serif;
     background:
       radial-gradient(1200px 600px at 10% -10%, rgba(0,113,227,.18), transparent 60%),
       radial-gradient(900px 500px at 100% 0%, rgba(255,45,85,.14), transparent 55%),
@@ -37,55 +38,40 @@
       linear-gradient(180deg,var(--bg),var(--bg2));
     background-attachment:fixed;min-height:100%;
   }
-
-  /* 顶栏 */
-  header{
-    position:sticky;top:0;z-index:40;
-    display:flex;align-items:center;gap:12px;
-    padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;
-    background:var(--glass);
-    -webkit-backdrop-filter:blur(24px) saturate(180%);
-    backdrop-filter:blur(24px) saturate(180%);
-    border-bottom:1px solid var(--stroke);
-  }
-  header .menu{
-    width:38px;height:38px;flex:0 0 auto;padding:0;border-radius:12px;
-    display:flex;align-items:center;justify-content:center;
-    background:var(--glass-strong);border:1px solid var(--stroke);font-size:17px
-  }
+  header{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:12px;
+    padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;background:var(--glass);
+    -webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);
+    border-bottom:1px solid var(--stroke)}
+  header .menu{width:38px;height:38px;flex:0 0 auto;padding:0;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;background:var(--glass-strong);
+    border:1px solid var(--stroke);font-size:17px}
   header h1{font-size:17px;margin:0;font-weight:600;letter-spacing:-.01em;flex:1}
   header .ver{font-size:12px;color:var(--muted)}
 
-  .wrap{max-width:680px;margin:0 auto;padding:16px 16px 40px}
+  .wrap{max-width:680px;margin:0 auto;padding:16px 16px calc(env(safe-area-inset-bottom) + 32px)}
   .page{display:none}
-  .page.active{display:block}
+  .page.active{display:block;animation:fade .18s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 
-  .card{
-    background:var(--glass);
-    -webkit-backdrop-filter:blur(30px) saturate(180%);
-    backdrop-filter:blur(30px) saturate(180%);
-    border:1px solid var(--stroke);border-radius:22px;
-    padding:16px;margin-bottom:14px;box-shadow:var(--shadow);
-  }
+  .card{background:var(--glass);-webkit-backdrop-filter:blur(30px) saturate(180%);
+    backdrop-filter:blur(30px) saturate(180%);border:1px solid var(--stroke);
+    border-radius:var(--r-card);padding:16px;margin-bottom:var(--gap);box-shadow:var(--shadow)}
   .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-  h2{font-size:22px;margin:4px 0 14px;font-weight:700;letter-spacing:-.02em}
+  h2{font-size:22px;margin:4px 0 var(--gap);font-weight:700;letter-spacing:-.02em}
 
-  button{
-    font:inherit;font-weight:600;font-size:15px;padding:12px 18px;border-radius:999px;
+  button{font:inherit;font-weight:600;font-size:15px;padding:12px 18px;border-radius:999px;
     border:1px solid transparent;background:var(--glass-strong);color:var(--text);
-    transition:transform .16s ease,opacity .16s ease;flex:1;min-width:120px;
-  }
+    transition:transform .16s ease,opacity .16s ease;flex:1;min-width:110px}
   button:active{transform:scale(.97);opacity:.85}
   button:disabled{opacity:.45;transform:none}
   button.primary{background:var(--accent);color:#fff;box-shadow:0 6px 20px rgba(0,113,227,.35)}
   button.ghost{background:transparent;border-color:var(--stroke)}
   button.danger{color:var(--danger)}
   button.small{flex:0 0 auto;min-width:auto;padding:9px 14px;font-size:14px}
+  button.tool{flex:0 0 auto;min-width:auto;padding:8px 12px;font-size:13px;border-radius:12px}
 
-  input{
-    flex:1;min-width:130px;font:inherit;font-size:14px;padding:11px 14px;border-radius:14px;
-    border:1px solid var(--stroke);background:var(--glass-strong);color:var(--text);
-  }
+  input{flex:1;min-width:120px;font:inherit;font-size:14px;padding:11px 14px;border-radius:14px;
+    border:1px solid var(--stroke);background:var(--glass-strong);color:var(--text);height:44px}
   input::placeholder{color:var(--muted)}
 
   .status{display:flex;align-items:center;gap:9px;font-size:14px;color:var(--muted);margin-top:12px}
@@ -94,61 +80,87 @@
   .dot.bad{background:var(--danger);box-shadow:0 0 0 4px rgba(255,59,48,.16)}
   .dot.run{background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
 
-  pre{
-    margin:14px 0 0;padding:14px;border-radius:16px;background:rgba(0,0,0,.04);
-    border:1px solid var(--stroke);height:40vh;overflow:auto;white-space:pre-wrap;
-    word-break:break-word;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;
-  }
-  @media (prefers-color-scheme:dark){ pre{background:rgba(255,255,255,.05)} }
+  pre.log{margin:14px 0 0;padding:14px;border-radius:14px;background:rgba(0,0,0,.04);
+    border:1px solid var(--stroke);height:30vh;overflow:auto;white-space:pre-wrap;
+    word-break:break-word;font:12px/1.55 ui-monospace,Menlo,monospace;transition:height .2s ease}
+  pre.log.open{height:60vh}
+  @media (prefers-color-scheme:dark){ pre.log{background:rgba(255,255,255,.05)} }
 
   .filelist{max-height:46vh;overflow:auto;margin-top:10px}
   .filelist button{display:block;width:100%;text-align:left;margin-bottom:6px;
     font-weight:500;font-size:14px;padding:11px 14px}
 
-  /* 轻提示 */
-  #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);transform:translateX(-50%) translateY(12px);
-    max-width:86vw;padding:11px 18px;border-radius:999px;font-size:14px;font-weight:500;
-    background:var(--glass-strong);color:var(--text);border:1px solid var(--stroke);
-    -webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);
-    box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;z-index:70}
+  .check{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--stroke);font-size:14px}
+  .check:last-child{border-bottom:none}
+  .check .ic{flex:0 0 auto;width:20px;text-align:center}
+  .check .nm{font-weight:600}
+  .check .dt{color:var(--muted);font-size:12px;margin-top:2px;word-break:break-all}
+
+  #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);
+    transform:translateX(-50%) translateY(12px);max-width:86vw;padding:11px 18px;border-radius:999px;
+    font-size:14px;font-weight:500;background:var(--glass-strong);color:var(--text);
+    border:1px solid var(--stroke);-webkit-backdrop-filter:blur(24px) saturate(180%);
+    backdrop-filter:blur(24px) saturate(180%);box-shadow:var(--shadow);opacity:0;
+    pointer-events:none;transition:opacity .2s ease,transform .2s ease;z-index:70}
   #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-  /* 抽屉 */
-  #drawer{
-    position:fixed;inset:0;z-index:60;display:none;
-  }
-  #drawer .mask{position:absolute;inset:0;background:rgba(0,0,0,.28);
-    -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
-  #drawer .panel{
-    position:absolute;top:0;bottom:0;left:0;width:78%;max-width:320px;
-    background:var(--glass-strong);
-    -webkit-backdrop-filter:blur(40px) saturate(180%);
-    backdrop-filter:blur(40px) saturate(180%);
-    border-right:1px solid var(--stroke);
+  #drawer{position:fixed;inset:0;z-index:60;display:none}
+  #drawer .mask{position:absolute;inset:0;background:rgba(0,0,0,.28)}
+  #drawer .panel{position:absolute;top:0;bottom:0;left:0;width:78%;max-width:320px;
+    background:var(--glass-strong);-webkit-backdrop-filter:blur(40px) saturate(180%);
+    backdrop-filter:blur(40px) saturate(180%);border-right:1px solid var(--stroke);
     padding:calc(env(safe-area-inset-top) + 22px) 16px calc(env(safe-area-inset-bottom) + 16px);
-    display:flex;flex-direction:column;gap:6px;
-    animation:slide .22s ease;
-  }
-  @keyframes slide{from{transform:translateX(-100%)}to{transform:translateX(0)}}
-  #drawer .brand{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0 0 4px 8px}
+    display:flex;flex-direction:column;gap:6px;animation:slide .2s ease}
+  @keyframes slide{from{transform:translateX(-100%)}to{transform:none}}
+  #drawer .brand{font-size:20px;font-weight:700;margin:0 0 2px 8px}
   #drawer .sub{font-size:12px;color:var(--muted);margin:0 0 14px 8px}
-  #drawer button{
-    flex:none;width:100%;text-align:left;background:transparent;border:none;
-    padding:13px 14px;border-radius:14px;font-size:15px;font-weight:500;color:var(--text)
-  }
+  #drawer button{flex:none;width:100%;text-align:left;background:transparent;border:none;
+    padding:13px 14px;border-radius:14px;font-size:15px;font-weight:500;color:var(--text)}
   #drawer button.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
   #drawer .foot{margin-top:auto;font-size:12px;color:var(--muted);padding:8px}
 
   /* 编辑器 */
   #editor{position:fixed;inset:0;z-index:80;display:none;flex-direction:column;
-    background:var(--bg);padding:calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 12px)}
-  #editor .head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-  #editor .head .path{flex:1;font-size:13px;color:var(--muted);word-break:break-all}
-  #editor textarea{flex:1;width:100%;border-radius:16px;border:1px solid var(--stroke);
-    background:var(--glass-strong);color:var(--text);padding:12px;
-    font:12px/1.6 ui-monospace,Menlo,monospace;resize:none;outline:none}
+    background:var(--bg);padding:calc(env(safe-area-inset-top) + 10px) 10px calc(env(safe-area-inset-bottom) + 10px)}
+  #editor .head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  #editor .head .path{flex:1;font-size:12px;color:var(--muted);word-break:break-all;max-height:32px;overflow:hidden}
+  #editor .tools{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:6px}
+  #editor .tools::-webkit-scrollbar{display:none}
+  .edbody{position:relative;flex:1;border-radius:14px;border:1px solid var(--stroke);overflow:hidden}
+  .edbody .ln{position:absolute;left:0;top:0;bottom:0;width:34px;padding:12px 4px;
+    text-align:right;color:var(--muted);font:12px/1.6 ui-monospace,Menlo,monospace;
+    background:rgba(127,127,127,.06);overflow:hidden;user-select:none}
+  #ed-hl,#ed-text{position:absolute;inset:0;left:34px;margin:0;padding:12px;
+    font:12px/1.6 ui-monospace,Menlo,monospace;white-space:pre;tab-size:2;border:0}
+  #ed-hl{overflow:hidden;pointer-events:none}
+  #ed-hl code{font:inherit;background:none;padding:0}
+  #ed-text{background:transparent;color:transparent;caret-color:var(--accent);
+    overflow:auto;resize:none;outline:none}
+  #ed-text::selection{background:rgba(10,132,255,.28)}
+  #preview{position:absolute;inset:0;left:34px;display:none;overflow:auto;padding:12px;
+    font-size:14px;line-height:1.7;background:var(--bg)}
+  #preview.show{display:block}
+  #preview img{max-width:100%;border-radius:10px}
+  #preview pre{background:rgba(127,127,127,.1);padding:10px;border-radius:10px;overflow:auto}
+  #preview code{font-family:ui-monospace,Menlo,monospace;font-size:12.5px}
+  #preview blockquote{margin:0;padding-left:12px;border-left:3px solid var(--stroke);color:var(--muted)}
+  #preview h1,#preview h2,#preview h3{line-height:1.3;margin:16px 0 8px}
+  #preview table{border-collapse:collapse;width:100%}
+  #preview th,#preview td{border:1px solid var(--stroke);padding:6px 8px;font-size:13px}
+  .mdxph{display:inline-block;padding:2px 8px;border-radius:6px;background:var(--accent-soft);
+    color:var(--accent);font-size:12px;font-family:ui-monospace,Menlo,monospace}
 
-  /* 启动遮罩 */
+  /* 短代码面板 */
+  #scpanel{position:fixed;left:0;right:0;bottom:0;z-index:85;display:none;
+    background:var(--glass-strong);-webkit-backdrop-filter:blur(40px) saturate(180%);
+    backdrop-filter:blur(40px) saturate(180%);border-top:1px solid var(--stroke);
+    border-radius:22px 22px 0 0;padding:14px 14px calc(env(safe-area-inset-bottom) + 14px);
+    max-height:70vh;overflow:auto}
+  #scpanel.show{display:block;animation:up .2s ease}
+  @keyframes up{from{transform:translateY(30px);opacity:.6}to{transform:none;opacity:1}}
+  #scpanel h3{font-size:14px;margin:8px 0;color:var(--muted);font-weight:600}
+  #scpanel .items{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
   #splash{position:fixed;inset:0;z-index:99;display:flex;flex-direction:column;
     align-items:center;justify-content:center;gap:16px;padding:28px;text-align:center;
     background:radial-gradient(800px 400px at 50% 0%, rgba(0,113,227,.22), transparent 60%),
@@ -162,6 +174,30 @@
   .bar > i{display:block;height:100%;width:0%;border-radius:3px;
     background:linear-gradient(90deg,#0a84ff,#64d2ff);transition:width .3s ease}
   .splash-hint{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 24px);font-size:12px;color:var(--muted)}
+
+  /* 代码高亮配色（GitHub 风） */
+  .hljs-comment,.hljs-quote{color:#6a737d;font-style:italic}
+  .hljs-keyword,.hljs-selector-tag,.hljs-type{color:#d73a49}
+  .hljs-string,.hljs-attr,.hljs-template-tag{color:#032f62}
+  .hljs-number,.hljs-literal,.hljs-variable{color:#005cc5}
+  .hljs-title,.hljs-section,.hljs-name{color:#6f42c1}
+  .hljs-built_in,.hljs-symbol{color:#e36209}
+  .hljs-meta{color:#b31d28}
+  .hljs-tag{color:#22863a}
+  .hljs-deletion{background:#ffeef0}
+  .hljs-addition{background:#f0fff4}
+  @media (prefers-color-scheme:dark){
+    .hljs-comment,.hljs-quote{color:#8b949e}
+    .hljs-keyword,.hljs-selector-tag,.hljs-type{color:#ff7b72}
+    .hljs-string,.hljs-attr,.hljs-template-tag{color:#a5d6ff}
+    .hljs-number,.hljs-literal,.hljs-variable{color:#79c0ff}
+    .hljs-title,.hljs-section,.hljs-name{color:#d2a8ff}
+    .hljs-built_in,.hljs-symbol{color:#ffa657}
+    .hljs-meta{color:#ffa198}
+    .hljs-tag{color:#7ee787}
+    .hljs-deletion{background:rgba(255,123,114,.15)}
+    .hljs-addition{background:rgba(126,231,135,.15)}
+  }
 </style>
 </head>
 <body>
@@ -176,7 +212,7 @@
 
 <header id="topbar" style="display:none">
   <button class="menu" id="btn-menu">☰</button>
-  <h1 id="page-title">构建</h1>
+  <h1 id="page-title">构建与预览</h1>
   <span class="ver" id="ver-text"></span>
 </header>
 
@@ -188,18 +224,17 @@
     <p class="brand">心记管理</p>
     <p class="sub">本地构建 · 预览 · 发布</p>
     <button data-page="build" class="on">构建与预览</button>
-    <button data-page="posts">文章与图片</button>
+    <button data-page="posts">文章</button>
     <button data-page="theme">主题</button>
     <button data-page="comments">评论</button>
     <button data-page="deploy">发布</button>
-    <button data-page="env">环境</button>
+    <button data-page="env">环境与体检</button>
     <div class="foot" id="drawer-ver"></div>
   </div>
 </div>
 
 <div class="wrap" id="main" style="display:none">
 
-  <!-- 构建 -->
   <section class="page active" id="page-build">
     <div class="card">
       <div class="row">
@@ -207,11 +242,14 @@
         <button id="btn-preview">预览</button>
       </div>
       <div class="status"><span class="dot" id="dot"></span><span id="state">未知</span></div>
-      <pre id="log"></pre>
+      <pre class="log" id="log"></pre>
+      <div class="row" style="margin-top:10px">
+        <button class="small ghost" id="btn-log-size">展开日志</button>
+        <button class="small ghost" id="btn-clear-log">清空</button>
+      </div>
     </div>
   </section>
 
-  <!-- 文章 -->
   <section class="page" id="page-posts">
     <h2>文章</h2>
     <div class="card">
@@ -229,7 +267,6 @@
     </div>
   </section>
 
-  <!-- 主题 -->
   <section class="page" id="page-theme">
     <h2>主题</h2>
     <div class="card">
@@ -241,7 +278,6 @@
     </div>
   </section>
 
-  <!-- 评论 -->
   <section class="page" id="page-comments">
     <h2>评论</h2>
     <div class="card">
@@ -260,7 +296,6 @@
     </div>
   </section>
 
-  <!-- 发布 -->
   <section class="page" id="page-deploy">
     <h2>发布</h2>
     <div class="card">
@@ -278,7 +313,7 @@
       <div class="row" style="margin-bottom:10px">
         <button class="ghost" id="btn-deploy">发布到 Vercel</button>
       </div>
-      <div class="row" style="margin-bottom:10px">
+      <div class="row">
         <button class="ghost small" id="btn-save" style="flex:1">保存配置</button>
       </div>
     </div>
@@ -302,19 +337,23 @@
     </div>
   </section>
 
-  <!-- 环境 -->
   <section class="page" id="page-env">
-    <h2>环境</h2>
+    <h2>环境与体检</h2>
+    <div class="card">
+      <div class="row" style="margin-bottom:10px">
+        <button class="primary" id="btn-selftest">运行体检</button>
+        <button class="ghost" id="btn-net">网络诊断</button>
+      </div>
+      <div id="checks"></div>
+    </div>
     <div class="card">
       <div class="row" style="margin-bottom:10px">
         <button class="ghost" id="btn-update">检查更新</button>
-        <button class="ghost" id="btn-net">网络诊断</button>
       </div>
       <div id="update-box" style="font-size:14px"></div>
     </div>
     <div class="card">
       <div class="row" style="margin-bottom:10px">
-        <button class="ghost" id="btn-diag">自检</button>
         <button class="ghost" id="btn-install">安装环境</button>
       </div>
       <div class="row">
@@ -328,149 +367,345 @@
   <div class="head">
     <button class="small ghost" id="ed-close" style="flex:0 0 auto">关闭</button>
     <span class="path" id="ed-path"></span>
+    <button class="small ghost" id="ed-preview" style="flex:0 0 auto">预览</button>
     <button class="small primary" id="ed-save" style="flex:0 0 auto">保存</button>
   </div>
-  <textarea id="ed-text" spellcheck="false"></textarea>
+  <div class="tools" id="ed-tools"></div>
+  <div class="edbody">
+    <div class="ln" id="ed-ln">1</div>
+    <pre id="ed-hl"><code></code></pre>
+    <textarea id="ed-text" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+    <div id="preview"></div>
+  </div>
 </div>
 
+<div id="scpanel">
+  <div class="row" style="margin-bottom:6px">
+    <span style="flex:1;font-weight:600;font-size:15px">插入短代码</span>
+    <button class="small ghost" id="sc-close" style="flex:0 0 auto">关闭</button>
+  </div>
+  <div id="sc-body"></div>
+</div>
+
+<script src="hljs.min.js"></script>
+<script src="marked.min.js"></script>
 <script>
-  const logEl = document.getElementById('log')
-  const stateEl = document.getElementById('state')
-  const dotEl = document.getElementById('dot')
-  const splashStage = document.getElementById('splash-stage')
+  const $ = id => document.getElementById(id)
+  const logEl = $('log'), stateEl = $('state'), dotEl = $('dot')
+  const edBox = $('editor'), edText = $('ed-text'), edHL = $('ed-hl').firstElementChild
+  const edLN = $('ed-ln'), edPathEl = $('ed-path'), preview = $('preview')
 
   window.__log = (line) => { logEl.textContent += line + '\n'; logEl.scrollTop = logEl.scrollHeight }
-  function setTone(t){ dotEl.className = 'dot' + (t ? ' ' + t : '') }
-
-  const t0 = Date.now()
-  setInterval(() => {
-    const el = document.getElementById('splash-elapsed')
-    const sp = document.getElementById('splash')
-    if (el && sp && sp.style.display !== 'none') el.textContent = '已用 ' + Math.floor((Date.now()-t0)/1000) + ' 秒'
-  }, 1000)
-
-  window.__progress = (pct) => {
-    const bar = document.getElementById('splash-bar')
-    if (bar) bar.style.width = Math.max(0, Math.min(100, pct)) + '%'
-  }
+  const setTone = t => { dotEl.className = 'dot' + (t ? ' ' + t : '') }
 
   let toastTimer = null
   function toast(msg){
-    const el = document.getElementById('toast')
-    if (!el) return
-    el.textContent = msg
-    el.classList.add('show')
+    const el = $('toast'); if (!el) return
+    el.textContent = msg; el.classList.add('show')
     clearTimeout(toastTimer)
     toastTimer = setTimeout(() => el.classList.remove('show'), 2600)
   }
 
-  window.__stage = (msg) => {
+  const t0 = Date.now()
+  setInterval(() => {
+    const el = $('splash-elapsed'), sp = $('splash')
+    if (el && sp && sp.style.display !== 'none') el.textContent = '已用 ' + Math.floor((Date.now()-t0)/1000) + ' 秒'
+  }, 1000)
+
+  window.__progress = pct => { const b = $('splash-bar'); if (b) b.style.width = Math.max(0, Math.min(100, pct)) + '%' }
+
+  window.__stage = msg => {
     stateEl.textContent = msg
-    if (msg && !msg.startsWith('下载') && !msg.startsWith('正在解压')) toast(msg)
-    if (splashStage) splashStage.textContent = msg
+    const sp = $('splash-stage'); if (sp) sp.textContent = msg
+    if (msg && !/^(下载|正在解压)/.test(msg)) toast(msg)
     if (msg.startsWith('✓') || msg.indexOf('就绪') >= 0) setTone('good')
     else if (msg.startsWith('✗')) setTone('bad')
     else setTone('run')
   }
 
-  // ---------- 侧边栏 ----------
-  const drawer = document.getElementById('drawer')
-  const titles = {build:'构建与预览', posts:'文章与图片', theme:'主题', comments:'评论', deploy:'发布', env:'环境'}
+  // ---------- 导航 ----------
+  const drawer = $('drawer')
+  const titles = {build:'构建与预览', posts:'文章', theme:'主题', comments:'评论', deploy:'发布', env:'环境与体检'}
   function showPage(name){
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'))
-    const el = document.getElementById('page-' + name)
-    if (el) el.classList.add('active')
-    document.getElementById('page-title').textContent = titles[name] || name
-    document.querySelectorAll('#drawer button[data-page]').forEach(b =>
-      b.classList.toggle('on', b.dataset.page === name))
+    const el = $('page-' + name); if (el) el.classList.add('active')
+    $('page-title').textContent = titles[name] || name
+    document.querySelectorAll('#drawer button[data-page]').forEach(b => b.classList.toggle('on', b.dataset.page === name))
     drawer.style.display = 'none'
   }
-  document.getElementById('btn-menu').onclick = () => { drawer.style.display = 'block' }
-  document.getElementById('drawer-mask').onclick = () => { drawer.style.display = 'none' }
-  document.querySelectorAll('#drawer button[data-page]').forEach(b => {
-    b.onclick = () => showPage(b.dataset.page)
-  })
+  $('btn-menu').onclick = () => { drawer.style.display = 'block' }
+  $('drawer-mask').onclick = () => { drawer.style.display = 'none' }
+  document.querySelectorAll('#drawer button[data-page]').forEach(b => { b.onclick = () => showPage(b.dataset.page) })
 
   // ---------- 构建 ----------
-  window.__buildDone = () => {
-    ['btn-build','btn-preview','btn-diag','btn-install'].forEach(id => {
-      const el = document.getElementById(id); if (el) el.disabled = false
-    })
-  }
-  document.getElementById('btn-build').onclick = () => {
-    const b = document.getElementById('btn-build')
-    b.disabled = true
+  window.__buildDone = () => ['btn-build','btn-preview','btn-selftest','btn-install'].forEach(id => { const e = $(id); if (e) e.disabled = false })
+  $('btn-build').onclick = () => {
+    $('btn-build').disabled = true
     logEl.textContent = ''
     showPage('build')
     window.__stage('开始构建…')
-    try { Native.build() } catch (e) { window.__log('调用失败: ' + e); b.disabled = false }
+    try { Native.build() } catch (e) { window.__log('调用失败: ' + e); $('btn-build').disabled = false }
   }
-  document.getElementById('btn-preview').onclick = () => {
-    try {
-      Native.preview()
-      const url = Native.previewUrl()
-      setTimeout(() => { window.location.href = url }, 700)
-    } catch (e) { window.__log('预览失败: ' + e) }
+  $('btn-preview').onclick = () => {
+    try { Native.preview(); const url = Native.previewUrl(); setTimeout(() => { window.location.href = url }, 700) }
+    catch (e) { window.__log('预览失败: ' + e) }
+  }
+  $('btn-log-size').onclick = () => {
+    logEl.classList.toggle('open')
+    $('btn-log-size').textContent = logEl.classList.contains('open') ? '收起日志' : '展开日志'
+  }
+  $('btn-clear-log').onclick = () => { logEl.textContent = '' }
+
+  // ---------- 编辑器 ----------
+  let cur = {path:'', kind:'code', dirty:false}
+  const LANG = {ts:'typescript', tsx:'typescript', js:'javascript', mjs:'javascript', json:'json',
+    css:'css', md:'markdown', mdx:'markdown', astro:'xml', html:'xml', yaml:'yaml', yml:'yaml', sh:'bash'}
+  const langOf = p => LANG[(p.split('.').pop() || '').toLowerCase()] || 'plaintext'
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+
+  function refreshHL(){
+    const code = edText.value
+    let html
+    try { html = hljs.highlight(code, {language: langOf(cur.path), ignoreIllegals: true}).value }
+    catch (e) { html = esc(code) }
+    edHL.innerHTML = html + '\n'
+    const n = code.split('\n').length
+    if (edLN.dataset.n != String(n)) {
+      edLN.dataset.n = String(n)
+      let s = ''
+      for (let i = 1; i <= n; i++) s += i + '\n'
+      edLN.textContent = s
+    }
+    syncScroll()
+  }
+  function syncScroll(){
+    edHL.parentElement.scrollTop = 0
+    $('ed-hl').scrollTop = edText.scrollTop
+    $('ed-hl').scrollLeft = edText.scrollLeft
+    edLN.scrollTop = edText.scrollTop
+  }
+  edText.addEventListener('scroll', syncScroll)
+  edText.addEventListener('input', () => { cur.dirty = true; refreshHL() })
+  edText.addEventListener('keydown', e => {
+    if (e.key === 'Tab') {
+      e.preventDefault()
+      const s = edText.selectionStart, epos = edText.selectionEnd
+      edText.setRangeText('  ', s, epos, 'end')
+      cur.dirty = true; refreshHL()
+    }
+  })
+
+  const MD_TOOLS = [
+    ['B','**','**'], ['I','*','*'], ['H2','\n## ',''], ['列表','\n- ',''], ['引用','\n> ',''],
+    ['代码','\n```\n','\n```'], ['行内','`','`'], ['链接','[','](https://)'],
+    ['表格','\n| 列 1 | 列 2 |\n| --- | --- |\n| 值 | 值 |\n',''],
+    ['公式','$','$'], ['分割线','\n---\n','']
+  ]
+  const CODE_TOOLS = [['缩进','  ',''],['取消缩进','',''],['行注释','// ','']]
+
+  function buildTools(){
+    const box = $('ed-tools')
+    box.innerHTML = ''
+    const add = (label, fn, cls) => {
+      const b = document.createElement('button')
+      b.className = 'tool ' + (cls || 'ghost'); b.textContent = label; b.onclick = fn
+      box.appendChild(b)
+    }
+    if (cur.kind === 'md') {
+      MD_TOOLS.forEach(([label, before, after]) => add(label, () => wrap(before, after)))
+      add('短代码', openSC, 'primary')
+    } else {
+      add('缩进', () => wrap('  ', ''))
+      add('注释', () => wrap('// ', ''))
+      add('格式化缩进', () => toast('请用构建验证语法，编辑器不做格式化'))
+    }
+  }
+
+  function wrap(before, after){
+    const s = edText.selectionStart, e = edText.selectionEnd
+    const sel = edText.value.slice(s, e)
+    edText.setRangeText(before + sel + (after || ''), s, e, 'end')
+    cur.dirty = true; refreshHL(); edText.focus()
+  }
+
+  function openEditor(path){
+    cur = {path: path, kind: /\.(md|mdx)$/i.test(path) ? 'md' : 'code', dirty: false}
+    edPathEl.textContent = path
+    edText.value = Native.readThemeFile(path)
+    preview.classList.remove('show')
+    $('ed-preview').textContent = '预览'
+    $('ed-preview').classList.remove('primary')
+    buildTools(); refreshHL()
+    edBox.style.display = 'flex'
+    edText.focus()
+  }
+
+  let closeArmed = false, closeTimer = null
+  $('ed-close').onclick = () => {
+    if (cur.dirty && !closeArmed) {
+      closeArmed = true
+      $('ed-close').textContent = '放弃修改?'
+      closeTimer = setTimeout(() => { closeArmed = false; $('ed-close').textContent = '关闭' }, 4000)
+      return
+    }
+    clearTimeout(closeTimer); closeArmed = false
+    $('ed-close').textContent = '关闭'
+    edBox.style.display = 'none'
+    preview.classList.remove('show')
+    cur = {path:'', kind:'code', dirty:false}
+  }
+
+  $('ed-save').onclick = () => {
+    const r = Native.writeThemeFile(cur.path, edText.value)
+    if (r === 'ok') { cur.dirty = false; toast('✓ 已保存'); window.__stage('✓ 已保存，记得重新构建') }
+    else toast(r)
+  }
+
+  $('ed-preview').onclick = () => {
+    if (preview.classList.contains('show')) {
+      preview.classList.remove('show')
+      $('ed-preview').textContent = '预览'
+      return
+    }
+    let text = edText.value
+    text = text.replace(/^---\n[\s\S]*?\n---\n/, '')
+    text = text.replace(/^import .*$/gm, '')
+    let html = ''
+    try { html = marked.parse(text) } catch (e) { html = esc(text) }
+    html = html.replace(/<([A-Z][A-Za-z]*)\b[^>]*\/>/g, '<span class="mdxph">&lt;$1 /&gt;</span>')
+    preview.innerHTML = html
+    preview.classList.add('show')
+    $('ed-preview').textContent = '源码'
+    $('ed-preview').classList.add('primary')
+  }
+
+  // ---------- 短代码 ----------
+  const SC = [
+    {g:'提示块', items:[
+      {n:'Note', need:['Aside'], tpl:'<Aside type="note" title="提示">\n\n</Aside>'},
+      {n:'Tip', need:['Aside'], tpl:'<Aside type="tip" title="小技巧">\n\n</Aside>'},
+      {n:'Caution', need:['Aside'], tpl:'<Aside type="caution" title="注意">\n\n</Aside>'},
+      {n:'Danger', need:['Aside'], tpl:'<Aside type="danger" title="危险">\n\n</Aside>'}
+    ]},
+    {g:'文本', items:[
+      {n:'Spoiler', need:['Spoiler'], tpl:'<Spoiler>被遮挡的内容</Spoiler>'},
+      {n:'Label', need:['Label'], tpl:'<Label>标签</Label>'},
+      {n:'Button', need:['Button'], tpl:'<Button title="按钮" href="/" variant="ahead" />'}
+    ]},
+    {g:'结构', items:[
+      {n:'Collapse', need:['Collapse'], tpl:'<Collapse title="点我展开">\n\n</Collapse>'},
+      {n:'Tabs', need:['Tabs','TabItem'], tpl:'<Tabs>\n  <TabItem label="一">\n\n  </TabItem>\n  <TabItem label="二">\n\n  </TabItem>\n</Tabs>'},
+      {n:'Steps', need:['Steps'], tpl:'<Steps>\n\n</Steps>'},
+      {n:'Card', need:['Card'], tpl:'<Card title="卡片标题">\n\n</Card>'}
+    ]},
+    {g:'扩展', items:[
+      {n:'QRCode', need:['QRCode'], from:'advanced', tpl:'<QRCode content="https://c.moodlog.cn" />'},
+      {n:'Github', need:['GithubCard'], from:'advanced', tpl:'<GithubCard repo="zlemoni/blog-admin-app" />'},
+      {n:'LinkPreview', need:['LinkPreview'], from:'advanced', tpl:'<LinkPreview href="https://astro.build" />'}
+    ]}
+  ]
+
+  function openSC(){
+    const body = $('sc-body')
+    body.innerHTML = SC.map(grp =>
+      '<h3>' + grp.g + '</h3><div class="items">' +
+      grp.items.map((it, i) => '<button class="tool ghost" data-g="' + grp.g + '" data-i="' + i + '">' + it.n + '</button>').join('') +
+      '</div>').join('')
+    body.querySelectorAll('button').forEach(b => {
+      b.onclick = () => {
+        const grp = SC.find(g => g.g === b.dataset.g)
+        insertSC(grp.items[parseInt(b.dataset.i, 10)])
+      }
+    })
+    $('scpanel').classList.add('show')
+  }
+  $('sc-close').onclick = () => $('scpanel').classList.remove('show')
+
+  function ensureImport(text, sc){
+    const names = sc.need || []
+    if (!names.length) return text
+    const mod = sc.from === 'advanced' ? 'astro-pure/advanced' : 'astro-pure/user'
+    const m = text.match(/^---\n[\s\S]*?\n---\n/)
+    const head = m ? m[0] : ''
+    const body = m ? text.slice(head.length) : text
+    const re = new RegExp("import\\s*\\{([^}]*)\\}\\s*from\\s*'" + mod.replace('/', '\\/') + "'")
+    const found = body.match(re)
+    if (found) {
+      const have = found[1].split(',').map(s => s.trim()).filter(Boolean)
+      const add = names.filter(n => have.indexOf(n) < 0)
+      if (!add.length) return text
+      const merged = "import { " + have.concat(add).join(', ') + " } from '" + mod + "'"
+      return head + body.replace(re, merged)
+    }
+    return head + "import { " + names.join(', ') + " } from '" + mod + "'\n" + body
+  }
+
+  function insertSC(sc){
+    let path = cur.path
+    if (!/\.mdx$/i.test(path)) {
+      const np = Native.convertToMdx(path)
+      if (np.indexOf('/') < 0) { toast(np); return }
+      path = np
+      cur.path = np
+      edPathEl.textContent = np
+    }
+    let text = ensureImport(edText.value, sc)
+    const s = edText.selectionStart
+    if (s >= 0) {
+      const before = text.slice(0, s), after = text.slice(s)
+      text = before + (before.endsWith('\n') || before === '' ? '' : '\n') + sc.tpl + '\n' + after
+    } else {
+      text += '\n' + sc.tpl + '\n'
+    }
+    edText.value = text
+    const r = Native.writeThemeFile(path, text)
+    cur.dirty = r !== 'ok'
+    refreshHL()
+    $('scpanel').classList.remove('show')
+    toast(r === 'ok' ? '✓ 已插入 ' + sc.n : r)
   }
 
   // ---------- 文章 ----------
-  let editingPath = ''
-  const edBox = document.getElementById('editor')
-  const edText = document.getElementById('ed-text')
-  const edPathEl = document.getElementById('ed-path')
-
-  function openEditor(path){
-    editingPath = path
-    edPathEl.textContent = path
-    edText.value = Native.readThemeFile(path)
-    edBox.style.display = 'flex'
-  }
-  document.getElementById('ed-close').onclick = () => { edBox.style.display = 'none' }
-  document.getElementById('ed-save').onclick = () => {
-    const r = Native.writeThemeFile(editingPath, edText.value)
-    window.__stage(r === 'ok' ? '✓ 已保存，记得重新构建' : r)
-    if (r === 'ok') edBox.style.display = 'none'
-  }
-
   function loadPosts(){
-    const box = document.getElementById('post-list')
+    const box = $('post-list')
     try {
       const list = JSON.parse(Native.listPosts())
+      const bad = JSON.parse(Native.scanFrontmatter() || '[]')
+      const badSet = new Set(bad.map(b => b.path))
       if (!list.length) { box.innerHTML = '<div class="status">还没有文章</div>'; return }
       box.innerHTML = list.map(p =>
         '<button class="ghost" data-path="' + p.path + '">' + (p.title || p.path) +
-        '<div style="color:var(--muted);font-weight:400;font-size:12px">' + (p.date || '') + '</div></button>').join('')
-      box.querySelectorAll('button').forEach(b => {
-        b.onclick = () => openEditor(b.dataset.path)
-      })
+        '<div style="color:var(--muted);font-weight:400;font-size:12px">' + (p.date || '') +
+        (badSet.has(p.path) ? ' · <span style="color:var(--danger)">frontmatter 需修正</span>' : '') +
+        '</div></button>').join('')
+      box.querySelectorAll('button').forEach(b => { b.onclick = () => openEditor(b.dataset.path) })
     } catch (e) { window.__log('读取文章失败: ' + e) }
   }
-  document.getElementById('btn-posts').onclick = loadPosts
-  document.getElementById('btn-newpost').onclick = () => {
-    const title = prompt('文章标题')
+  $('btn-posts').onclick = loadPosts
+  $('btn-newpost').onclick = () => {
+    const title = prompt('文章标题（≤60 字）')
     if (!title) return
     try {
       const r = Native.createPost(title)
-      if (r.indexOf('/') > 0) { window.__stage('✓ 已创建: ' + r.split('/').pop()); loadPosts() }
-      else { window.__stage(r) }
+      if (r.indexOf('/') > 0) { toast('✓ 已创建'); loadPosts() } else toast(r)
     } catch (e) { window.__log('创建失败: ' + e) }
   }
-  document.getElementById('btn-image').onclick = () => {
-    const q = parseInt(document.getElementById('img-q').value || '80', 10)
+  $('btn-image').onclick = () => {
+    const q = parseInt($('img-q').value || '80', 10)
     try { Native.pickImage(isNaN(q) ? 80 : q) } catch (e) { window.__log('调用失败: ' + e) }
   }
-  window.__imageReady = (path) => {
-    if (edBox.style.display === 'flex') {
+  window.__imageReady = path => {
+    if (edBox.style.display === 'flex' && cur.kind === 'md') {
       const md = '![](' + path + ')'
-      const t = edText.value
-      const pos = edText.selectionStart || t.length
-      edText.value = t.slice(0, pos) + md + t.slice(pos)
-    } else { window.__log('图片已保存: ' + path) }
+      const pos = edText.selectionStart || edText.value.length
+      edText.value = edText.value.slice(0, pos) + md + edText.value.slice(pos)
+      cur.dirty = true; refreshHL()
+    } else { window.__log('图片已保存: ' + path); toast('图片已保存: ' + path) }
   }
 
   // ---------- 主题 ----------
-  document.getElementById('btn-theme').onclick = () => {
-    const box = document.getElementById('theme-files')
+  $('btn-theme').onclick = () => {
+    const box = $('theme-files')
     try {
       const list = JSON.parse(Native.listThemeFiles())
       box.innerHTML = list.map(f =>
@@ -481,29 +716,21 @@
   }
 
   // ---------- 评论 ----------
-  document.getElementById('btn-wl-login').onclick = () => {
-    const email = document.getElementById('wl-email').value.trim()
-    const pass = document.getElementById('wl-pass').value
-    const url = document.getElementById('wl-url').value.trim()
-    if (!email || !pass) { window.__stage('请填写邮箱和密码'); return }
-    try {
-      if (url) Native.saveConfig('walineUrl', url)
-      window.__stage('Waline 登录中…')
-      Native.walineLogin(email, pass)
-    } catch (e) { window.__log('调用失败: ' + e) }
+  $('btn-wl-login').onclick = () => {
+    const email = $('wl-email').value.trim(), pass = $('wl-pass').value, url = $('wl-url').value.trim()
+    if (!email || !pass) { toast('请填写邮箱和密码'); return }
+    try { if (url) Native.saveConfig('walineUrl', url); window.__stage('Waline 登录中…'); Native.walineLogin(email, pass) }
+    catch (e) { window.__log('调用失败: ' + e) }
   }
-  window.__walineLogin = (name) => { window.__stage('✓ Waline 已登录: ' + name) }
-  document.getElementById('btn-wl-load').onclick = () => {
-    try { Native.walineComments('waiting', 1) } catch (e) { window.__log('调用失败: ' + e) }
-  }
+  window.__walineLogin = name => { window.__stage('✓ Waline 已登录: ' + name) }
+  $('btn-wl-load').onclick = () => { try { Native.walineComments('waiting', 1) } catch (e) { window.__log('调用失败: ' + e) } }
   function fmtTime(ts){
     if (!ts) return ''
-    const d = new Date(ts)
-    const p = n => String(n).padStart(2, '0')
+    const d = new Date(ts), p = n => String(n).padStart(2, '0')
     return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes())
   }
-  window.__comments = (jsonStr) => {
-    const box = document.getElementById('wl-list')
+  window.__comments = jsonStr => {
+    const box = $('wl-list')
     let list = []
     try { list = JSON.parse(jsonStr) } catch (e) {}
     if (!list.length) { box.innerHTML = '<div class="status">没有评论</div>'; return }
@@ -530,98 +757,75 @@
   }
 
   // ---------- 发布 ----------
-  window.__projects = (jsonStr) => {
-    const box = document.getElementById('proj-list')
+  window.__projects = jsonStr => {
+    const box = $('proj-list')
     let list = []
     try { list = JSON.parse(jsonStr) } catch (e) {}
     if (!list.length) { box.innerHTML = '<div class="status">未获取到项目</div>'; return }
-    box.innerHTML = '<div class="row">' + list.map(p =>
-      '<button class="small ghost" data-name="' + p.name + '">' + p.name + '</button>').join('') + '</div>'
+    box.innerHTML = '<div class="row">' + list.map(p => '<button class="small ghost" data-name="' + p.name + '">' + p.name + '</button>').join('') + '</div>'
     box.querySelectorAll('button').forEach(b => {
       b.onclick = () => {
-        document.getElementById('vc-project').value = b.dataset.name
+        $('vc-project').value = b.dataset.name
         box.querySelectorAll('button').forEach(x => x.classList.remove('primary'))
         b.classList.add('primary')
       }
     })
   }
-  window.__projectCreated = (name) => {
-    document.getElementById('vc-project').value = name
-    window.__stage('✓ 项目已创建: ' + name)
-  }
-  window.__deployDone = (url) => {
-    const b = document.getElementById('btn-deploy'); if (b) b.disabled = false
-    window.__log('发布完成: ' + url)
-  }
+  window.__projectCreated = name => { $('vc-project').value = name; window.__stage('✓ 项目已创建: ' + name) }
+  window.__deployDone = url => { const b = $('btn-deploy'); if (b) b.disabled = false; window.__log('发布完成: ' + url) }
 
-  function saveDeployCfg(){
-    Native.saveConfig('vercelToken', document.getElementById('vc-token').value.trim())
-    Native.saveConfig('vercelProject', document.getElementById('vc-project').value.trim())
-    Native.saveConfig('ghToken', document.getElementById('gh-token').value.trim())
-    Native.saveConfig('ghRepo', document.getElementById('gh-repo').value.trim())
-    Native.saveConfig('ghBranch', document.getElementById('gh-branch').value.trim() || 'main')
-    Native.saveConfig('proxyHost', document.getElementById('px-host').value.trim())
-    Native.saveConfig('proxyPort', document.getElementById('px-port').value.trim())
+  function saveCfg(){
+    Native.saveConfig('vercelToken', $('vc-token').value.trim())
+    Native.saveConfig('vercelProject', $('vc-project').value.trim())
+    Native.saveConfig('ghToken', $('gh-token').value.trim())
+    Native.saveConfig('ghRepo', $('gh-repo').value.trim())
+    Native.saveConfig('ghBranch', $('gh-branch').value.trim() || 'main')
+    Native.saveConfig('proxyHost', $('px-host').value.trim())
+    Native.saveConfig('proxyPort', $('px-port').value.trim())
   }
-  document.getElementById('btn-save').onclick = () => { saveDeployCfg(); window.__stage('配置已保存') }
-  document.getElementById('btn-projects').onclick = () => {
-    saveDeployCfg(); window.__stage('获取项目列表…'); Native.listProjects()
+  $('btn-save').onclick = () => { saveCfg(); toast('配置已保存') }
+  $('btn-projects').onclick = () => { saveCfg(); window.__stage('获取项目列表…'); Native.listProjects() }
+  $('btn-create').onclick = () => {
+    const n = $('vc-project').value.trim()
+    if (!n) { toast('先填项目名'); return }
+    saveCfg(); window.__stage('创建 ' + n + ' …'); Native.createProject(n)
   }
-  document.getElementById('btn-create').onclick = () => {
-    const n = document.getElementById('vc-project').value.trim()
-    if (!n) { window.__stage('先填项目名'); return }
-    saveDeployCfg(); window.__stage('创建 ' + n + ' …'); Native.createProject(n)
-  }
-  document.getElementById('btn-deploy').onclick = () => {
-    saveDeployCfg()
-    const b = document.getElementById('btn-deploy'); b.disabled = true
-    logEl.textContent = ''
-    try { Native.deployVercel() } catch (e) { window.__log('调用失败: ' + e); b.disabled = false }
-  }
-  document.getElementById('btn-push').onclick = () => {
-    saveDeployCfg()
-    const b = document.getElementById('btn-push'); b.disabled = true
-    try { window.__stage('开始推送…'); Native.pushToGitHub() } catch (e) { window.__log('调用失败: ' + e) }
-    setTimeout(() => { b.disabled = false }, 3000)
-  }
+  $('btn-deploy').onclick = () => { saveCfg(); $('btn-deploy').disabled = true; logEl.textContent = ''; try { Native.deployVercel() } catch (e) { window.__log('调用失败: ' + e); $('btn-deploy').disabled = false } }
+  $('btn-push').onclick = () => { saveCfg(); window.__stage('开始推送…'); try { Native.pushToGitHub() } catch (e) { window.__log('调用失败: ' + e) } }
 
   // ---------- 环境 ----------
-  window.__update = (jsonStr) => {
-    const box = document.getElementById('update-box')
+  window.__selfTest = jsonStr => {
+    const box = $('checks')
+    let list = []
+    try { list = JSON.parse(jsonStr) } catch (e) {}
+    if (!list.length) { box.innerHTML = '<div class="status">没有结果</div>'; return }
+    box.innerHTML = list.map(it =>
+      '<div class="check"><span class="ic">' + (it.ok ? '✅' : '❌') + '</span>' +
+      '<div><div class="nm">' + it.name + '</div><div class="dt">' + (it.detail || '') + '</div></div></div>').join('')
+    const bad = list.filter(x => !x.ok).length
+    toast(bad ? ('体检完成：' + bad + ' 项需要处理') : '✓ 体检全部通过')
+  }
+  $('btn-selftest').onclick = () => { try { Native.selfTest() } catch (e) { window.__log('调用失败: ' + e) } }
+  $('btn-net').onclick = () => { logEl.textContent = ''; showPage('build'); try { Native.netDiagnose() } catch (e) { window.__log('调用失败: ' + e) } }
+  window.__update = jsonStr => {
+    const box = $('update-box')
     try {
       const d = JSON.parse(jsonStr)
-      document.getElementById('ver-text').textContent = d.current
+      $('ver-text').textContent = d.current
       if (d.hasUpdate) {
-        box.innerHTML = '<div>新版本 <b>' + d.latest + '</b></div>'
-          + '<div class="row" style="margin-top:8px">'
-          + '<button class="small primary" id="dl1">应用内下载</button>'
-          + '<button class="small ghost" id="dl2">直链</button></div>'
-        const go = (url, btn) => { btn.disabled = true; btn.textContent = '下载中…'
-          try { Native.downloadUpdate(url) } catch (e) { window.__log('调用失败: ' + e) } }
-        document.getElementById('dl1').onclick = e => go(d.mirror, e.target)
-        document.getElementById('dl2').onclick = e => go(d.direct, e.target)
-      } else { box.textContent = '已是最新版本' }
+        box.innerHTML = '<div>新版本 <b>' + d.latest + '</b></div><div class="row" style="margin-top:8px">' +
+          '<button class="small primary" id="dl1">应用内下载</button><button class="small ghost" id="dl2">直链</button></div>'
+        const go = (url, btn) => { btn.disabled = true; btn.textContent = '下载中…'; try { Native.downloadUpdate(url) } catch (e) { window.__log('调用失败: ' + e) } }
+        $('dl1').onclick = e => go(d.mirror, e.target)
+        $('dl2').onclick = e => go(d.direct, e.target)
+      } else box.textContent = '已是最新版本'
     } catch (e) { box.textContent = '解析失败: ' + e }
   }
-  window.__updateErr = (m) => { document.getElementById('update-box').textContent = '检查失败: ' + m }
-  document.getElementById('btn-update').onclick = () => {
-    try { Native.checkUpdate() } catch (e) { window.__updateErr('调用失败') }
-  }
-  document.getElementById('btn-net').onclick = () => {
-    logEl.textContent = ''; showPage('build')
-    window.__stage('网络诊断中…')
-    try { Native.netDiagnose() } catch (e) { window.__log('调用失败: ' + e) }
-  }
-  document.getElementById('btn-diag').onclick = () => {
-    logEl.textContent = ''; showPage('build')
-    try { Native.diagnose() } catch (e) { window.__log('调用失败: ' + e) }
-  }
-  document.getElementById('btn-install').onclick = () => {
-    logEl.textContent = ''; showPage('build')
-    try { Native.install() } catch (e) { window.__log('调用失败: ' + e) }
-  }
+  window.__updateErr = m => { $('update-box').textContent = '检查失败: ' + m }
+  $('btn-update').onclick = () => { try { Native.checkUpdate() } catch (e) { window.__updateErr('调用失败') } }
+  $('btn-install').onclick = () => { logEl.textContent = ''; showPage('build'); try { Native.install() } catch (e) { window.__log('调用失败: ' + e) } }
   let clearArmed = false, clearTimer = null
-  document.getElementById('btn-clear').onclick = (ev) => {
+  $('btn-clear').onclick = ev => {
     const b = ev.target
     if (!clearArmed) {
       clearArmed = true; b.textContent = '再点一次确认'; b.style.color = 'var(--danger)'
@@ -635,35 +839,34 @@
 
   // ---------- 启动 ----------
   window.__envReady = () => {
-    document.getElementById('splash').style.display = 'none'
-    document.getElementById('topbar').style.display = 'flex'
-    document.getElementById('main').style.display = 'block'
+    $('splash').style.display = 'none'
+    $('topbar').style.display = 'flex'
+    $('main').style.display = 'block'
     setTone('good'); stateEl.textContent = '环境就绪'
     try {
       const c = JSON.parse(Native.loadConfig())
-      document.getElementById('vc-token').value = c.vercelToken || ''
-      document.getElementById('vc-project').value = c.vercelProject || ''
-      document.getElementById('gh-token').value = c.ghToken || ''
-      document.getElementById('gh-repo').value = c.ghRepo || ''
-      document.getElementById('gh-branch').value = c.ghBranch || 'main'
-      document.getElementById('px-host').value = c.proxyHost || ''
-      document.getElementById('px-port').value = c.proxyPort || ''
-      document.getElementById('wl-url').value = c.walineUrl || 'https://c.moodlog.cn/waline'
-      document.getElementById('ver-text').textContent = Native.version()
-      document.getElementById('drawer-ver').textContent = 'v' + Native.version()
+      $('vc-token').value = c.vercelToken || ''
+      $('vc-project').value = c.vercelProject || ''
+      $('gh-token').value = c.ghToken || ''
+      $('gh-repo').value = c.ghRepo || ''
+      $('gh-branch').value = c.ghBranch || 'main'
+      $('px-host').value = c.proxyHost || ''
+      $('px-port').value = c.proxyPort || ''
+      $('wl-url').value = c.walineUrl || 'https://c.moodlog.cn/waline'
+      $('ver-text').textContent = Native.version()
+      $('drawer-ver').textContent = 'v' + Native.version()
     } catch (e) {}
+    loadPosts()
   }
-  window.__envError = (msg) => {
-    document.getElementById('splash-stage').textContent = '安装失败：' + msg
+  window.__envError = msg => {
+    const sp = $('splash-stage'); if (sp) sp.textContent = '安装失败：' + msg
     const b = document.createElement('button')
     b.textContent = '重试'; b.className = 'primary'; b.style.marginTop = '14px'
     b.onclick = () => location.reload()
-    document.getElementById('splash').appendChild(b)
+    $('splash').appendChild(b)
   }
 
-  try { Native.ensureEnv() } catch (e) {
-    document.getElementById('splash-stage').textContent = '调用失败: ' + e
-  }
+  try { Native.ensureEnv() } catch (e) { const sp = $('splash-stage'); if (sp) sp.textContent = '调用失败: ' + e }
 </script>
 </body>
 </html>
