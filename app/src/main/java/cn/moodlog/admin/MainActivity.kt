@@ -629,6 +629,154 @@ class MainActivity : AppCompatActivity() {
             return o.toString()
         }
 
+        // ---------- 文章 ----------
+
+        private fun blogDir(): File = File(payloadDir(), "project/src/content/blog")
+
+        @JavascriptInterface
+        fun listPosts(): String {
+            val out = org.json.JSONArray()
+            try {
+                val dir = blogDir()
+                if (!dir.exists()) return "[]"
+                dir.walkTopDown()
+                    .filter { it.isFile && (it.name.endsWith(".md") || it.name.endsWith(".mdx")) }
+                    .sortedByDescending { it.lastModified() }
+                    .forEach { f ->
+                        val text = try { f.readText().take(1200) } catch (e: Throwable) { "" }
+                        val title = Regex("(?m)^title:\\s*[\"']?(.+?)[\"']?\\s*$")
+                            .find(text)?.groupValues?.get(1)?.trim()
+                            ?: f.nameWithoutExtension
+                        val date = Regex("(?m)^(?:pubDate|date|publishDate):\\s*(.+?)\\s*$")
+                            .find(text)?.groupValues?.get(1)?.trim() ?: ""
+                        out.put(JSONObject().apply {
+                            put("path", f.relativeTo(themeRoot()).invariantSeparatorsPath)
+                            put("title", title)
+                            put("date", date)
+                            put("mtime", f.lastModified())
+                        })
+                    }
+            } catch (e: Throwable) {
+                log("列出文章失败: ${e.message}")
+            }
+            return out.toString()
+        }
+
+        @JavascriptInterface
+        fun createPost(title: String): String {
+            return try {
+                val dir = blogDir()
+                dir.mkdirs()
+                val slug = title.trim().lowercase()
+                    .replace(Regex("[^a-z0-9\\u4e00-\\u9fa5]+"), "-")
+                    .trim('-')
+                    .ifEmpty { "untitled-" + System.currentTimeMillis() }
+                val f = File(dir, "$slug.md")
+                if (f.exists()) return "已存在同名文章: ${f.name}"
+                val now = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+                f.writeText(
+                    "---\n" +
+                    "title: ${title.trim()}\n" +
+                    "description: ''\n" +
+                    "pubDate: $now\n" +
+                    "draft: true\n" +
+                    "---\n\n在这里开始写正文。\n"
+                )
+                log("已创建文章: ${f.name}")
+                f.relativeTo(themeRoot()).invariantSeparatorsPath
+            } catch (e: Throwable) {
+                "创建失败: ${e.message}"
+            }
+        }
+
+        @JavascriptInterface
+        fun deletePost(path: String): String {
+            return try {
+                val f = safeThemeFile(path) ?: return "路径不允许"
+                if (!f.exists()) return "文件不存在"
+                f.delete()
+                log("已删除: $path")
+                "ok"
+            } catch (e: Throwable) {
+                "删除失败: ${e.message}"
+            }
+        }
+
+        // ---------- 图片 → WebP ----------
+
+        private var pendingQuality = 80
+        private val pickImageReq = 1001
+
+        /** 调系统选图，压缩成 WebP 存到 public/images */
+        @JavascriptInterface
+        fun pickImage(quality: Int) {
+            pendingQuality = quality.coerceIn(30, 100)
+            ui.post {
+                try {
+                    val intent = android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT).apply {
+                        addCategory(android.content.Intent.CATEGORY_OPENABLE)
+                        type = "image/*"
+                    }
+                    startActivityForResult(intent, pickImageReq)
+                } catch (e: Throwable) {
+                    log("打开相册失败: ${e.message}")
+                }
+            }
+        }
+
+        override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+            super.onActivityResult(requestCode, resultCode, data)
+            if (requestCode != pickImageReq || resultCode != android.app.Activity.RESULT_OK) return
+            val uri = data?.data ?: return
+            io.execute {
+                try {
+                    stage("处理图片…")
+                    val resolver = contentResolver
+                    val opts = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    resolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it, null, opts) }
+                    var scale = 1
+                    val maxEdge = maxOf(opts.outWidth, opts.outHeight)
+                    while (maxEdge / scale > 1600) scale *= 2
+
+                    val decodeOpts = android.graphics.BitmapFactory.Options().apply { inSampleSize = scale }
+                    var bmp = resolver.openInputStream(uri)?.use {
+                        android.graphics.BitmapFactory.decodeStream(it, null, decodeOpts)
+                    } ?: throw IllegalStateException("无法读取图片")
+
+                    // EXIF 方向
+                    try {
+                        resolver.openInputStream(uri)?.use { input ->
+                            val exif = androidx.exifinterface.media.ExifInterface(input)
+                            val deg = when (exif.getAttributeInt(androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION, 1)) {
+                                androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                                androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                                androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                                else -> 0f
+                            }
+                            if (deg != 0f) {
+                                val m = android.graphics.Matrix().apply { postRotate(deg) }
+                                bmp = android.graphics.Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true)
+                            }
+                        }
+                    } catch (_: Throwable) {}
+
+                    val dir = File(payloadDir(), "project/public/images").apply { mkdirs() }
+                    val name = "img-" + System.currentTimeMillis() + ".webp"
+                    val outFile = File(dir, name)
+                    outFile.outputStream().use { os ->
+                        bmp.compress(android.graphics.Bitmap.CompressFormat.WEBP_LOSSY, pendingQuality, os)
+                    }
+                    val kb = outFile.length() / 1024
+                    log("已保存 /images/$name（${kb}KB，质量 $pendingQuality）")
+                    stage("✓ 图片已插入（${kb}KB）")
+                    js("window.__imageReady && window.__imageReady('/images/$name')")
+                } catch (e: Throwable) {
+                    log("图片处理失败: ${e.message}")
+                    stage("✗ 图片处理失败: ${e.message}")
+                }
+            }
+        }
+
         // ---------- 主题文件读写 ----------
 
         private fun themeRoot(): File = File(payloadDir(), "project")
