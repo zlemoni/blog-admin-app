@@ -609,9 +609,116 @@ class MainActivity : AppCompatActivity() {
             o.put("vercelToken", p.getString("vercelToken", "") ?: "")
             o.put("vercelProject", p.getString("vercelProject", "") ?: "")
             o.put("walineUrl", p.getString("walineUrl", "https://c.moodlog.cn/waline") ?: "")
+            o.put("ghToken", p.getString("ghToken", "") ?: "")
+            o.put("ghRepo", p.getString("ghRepo", "") ?: "")
+            o.put("ghBranch", p.getString("ghBranch", "main") ?: "main")
             o.put("proxyHost", p.getString("proxyHost", "") ?: "")
             o.put("proxyPort", p.getString("proxyPort", "") ?: "")
             return o.toString()
+        }
+
+        /** 通过 GitHub 推送 dist，让 Vercel 的 Git 集成自动构建部署（绕过 api.vercel.com） */
+        @JavascriptInterface
+        fun pushToGitHub() {
+            io.execute {
+                try {
+                    val ghToken = prefs().getString("ghToken", "") ?: ""
+                    val repo = prefs().getString("ghRepo", "") ?: ""
+                    val branch = prefs().getString("ghBranch", "main")?.ifEmpty { "main" } ?: "main"
+                    if (ghToken.isEmpty() || repo.isEmpty()) { stage("请先填写 GitHub Token 和 仓库"); return@execute }
+                    val dist = File(payloadDir(), "project/dist")
+                    if (!dist.exists()) { stage("没有产物，请先构建"); return@execute }
+
+                    val files = dist.walkTopDown().filter { it.isFile }.toList()
+                    log("待推送 ${files.size} 个文件 → $repo@$branch")
+
+                    // 1) 当前分支 SHA（没有则视为空仓库）
+                    var parent: String? = null
+                    try {
+                        val ref = JSONObject(ghApi("https://api.github.com/repos/$repo/git/ref/heads/$branch", "GET", ghToken, null))
+                        parent = ref.getJSONObject("object").getString("sha")
+                    } catch (e: Throwable) {
+                        log("分支不存在，将创建: $branch")
+                    }
+
+                    // 2) 逐文件建 blob
+                    val tree = org.json.JSONArray()
+                    files.forEachIndexed { i, f ->
+                        if (i % 20 == 0) stage("上传 ${i + 1}/${files.size}")
+                        val rel = f.relativeTo(dist).invariantSeparatorsPath
+                        val b64 = android.util.Base64.encodeToString(f.readBytes(), android.util.Base64.NO_WRAP)
+                        val body = JSONObject().apply {
+                            put("content", b64)
+                            put("encoding", "base64")
+                        }.toString()
+                        val blob = JSONObject(ghApi("https://api.github.com/repos/$repo/git/blobs", "POST", ghToken, body))
+                        tree.put(JSONObject().apply {
+                            put("path", rel)
+                            put("mode", "100644")
+                            put("type", "blob")
+                            put("sha", blob.getString("sha"))
+                        })
+                    }
+
+                    // 3) 建 tree（不带 base_tree，等于整站替换）
+                    stage("创建目录树…")
+                    val treeBody = JSONObject().put("tree", tree).toString()
+                    val treeSha = JSONObject(ghApi("https://api.github.com/repos/$repo/git/trees", "POST", ghToken, treeBody))
+                        .getString("sha")
+
+                    // 4) 提交
+                    stage("创建提交…")
+                    val commitObj = JSONObject().apply {
+                        put("message", "deploy: " + java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US).format(java.util.Date()))
+                        put("tree", treeSha)
+                        if (parent != null) put("parents", org.json.JSONArray().put(parent))
+                    }
+                    val commitSha = JSONObject(ghApi("https://api.github.com/repos/$repo/git/commits", "POST", ghToken, commitObj.toString()))
+                        .getString("sha")
+
+                    // 5) 更新分支
+                    stage("更新分支…")
+                    if (parent == null) {
+                        val refBody = JSONObject().apply {
+                            put("ref", "refs/heads/$branch")
+                            put("sha", commitSha)
+                        }.toString()
+                        ghApi("https://api.github.com/repos/$repo/git/refs", "POST", ghToken, refBody)
+                    } else {
+                        val refBody = JSONObject().apply {
+                            put("sha", commitSha)
+                            put("force", true)
+                        }.toString()
+                        ghApi("https://api.github.com/repos/$repo/git/refs/heads/$branch", "PATCH", ghToken, refBody)
+                    }
+
+                    stage("✓ 已推送，Vercel 将自动构建")
+                    js("window.__deployDone && window.__deployDone('https://github.com/$repo/commits/$branch')")
+                } catch (e: Throwable) {
+                    log("推送失败: ${e.message}")
+                    stage("✗ 推送失败: ${e.message}")
+                }
+            }
+        }
+
+        private fun ghApi(url: String, method: String, token: String, body: String?): String {
+            val conn = open(url)
+            conn.requestMethod = method
+            conn.connectTimeout = 20000
+            conn.readTimeout = 120000
+            conn.setRequestProperty("Authorization", "Bearer $token")
+            conn.setRequestProperty("Accept", "application/vnd.github+json")
+            conn.setRequestProperty("User-Agent", "blog-admin-app")
+            conn.setRequestProperty("Content-Type", "application/json")
+            if (body != null) {
+                conn.doOutput = true
+                conn.outputStream.use { it.write(body.toByteArray()) }
+            }
+            val code = conn.responseCode
+            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+            val text = stream?.bufferedReader()?.use { it.readText() } ?: ""
+            if (code !in 200..299) throw IllegalStateException("HTTP $code ${text.take(180)}")
+            return text
         }
 
         /** 用 token 拉取项目列表，供用户选择 */
