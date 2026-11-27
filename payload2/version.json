@@ -1,5 +1,5 @@
 {
-  "version": "0.8.2-p40",
-  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.8.2-p40/app-debug.apk",
-  "notes": "字体回退到系统栈"
+  "version": "0.9.0-p41",
+  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.9.0-p41/app-debug.apk",
+  "notes": "Vercel 项目列表、代理支持"
 }
