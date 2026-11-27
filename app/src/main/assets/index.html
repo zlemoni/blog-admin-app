@@ -168,6 +168,18 @@
   </div>
 
   <div class="card">
+    <div class="row" style="margin-bottom:10px">
+      <button class="ghost" id="btn-posts">文章列表</button>
+      <button class="ghost" id="btn-newpost">新建文章</button>
+    </div>
+    <div class="filelist" id="post-list" style="display:none"></div>
+    <div class="row" style="margin-top:10px">
+      <input id="img-q" placeholder="图片质量 30-100（默认 80）" inputmode="numeric" style="max-width:180px">
+      <button class="ghost small" id="btn-image">插入图片</button>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="row">
       <button class="ghost" id="btn-theme">主题文件</button>
     </div>
@@ -413,6 +425,56 @@
     setTimeout(() => { b.disabled = false }, 1500)
   }
 
+  // ---------- 文章 ----------
+  let postEditing = null
+
+  document.getElementById('btn-posts').onclick = () => {
+    const box = document.getElementById('post-list')
+    if (box.style.display === 'block') { box.style.display = 'none'; return }
+    try {
+      const list = JSON.parse(Native.listPosts())
+      if (!list.length) {
+        box.innerHTML = '<div class="ver">还没有文章</div>'
+      } else {
+        box.innerHTML = list.map(p =>
+          '<button class="ghost" data-path="' + p.path + '">' + (p.title || p.path) +
+          '<div style="color:var(--muted);font-weight:400;font-size:12px">' + (p.date || '') + '</div></button>').join('')
+        box.querySelectorAll('button').forEach(b => {
+          b.onclick = () => { postEditing = b.dataset.path; openEditor(b.dataset.path) }
+        })
+      }
+      box.style.display = 'block'
+    } catch (e) { window.__log('读取文章失败: ' + e) }
+  }
+
+  document.getElementById('btn-newpost').onclick = () => {
+    const title = prompt('文章标题')
+    if (!title) return
+    try {
+      const r = Native.createPost(title)
+      if (r.indexOf('/') > 0) {
+        window.__stage('✓ 已创建: ' + r.split('/').pop())
+        document.getElementById('btn-posts').click()
+      } else { window.__stage(r) }
+    } catch (e) { window.__log('创建失败: ' + e) }
+  }
+
+  document.getElementById('btn-image').onclick = () => {
+    const q = parseInt(document.getElementById('img-q').value || '80', 10)
+    try { Native.pickImage(isNaN(q) ? 80 : q) } catch (e) { window.__log('调用失败: ' + e) }
+  }
+
+  window.__imageReady = (path) => {
+    if (edBox.style.display === 'flex') {
+      const md = '![](' + path + ')'
+      const t = edText.value
+      const pos = edText.selectionStart || t.length
+      edText.value = t.slice(0, pos) + md + t.slice(pos)
+    } else {
+      window.__log('图片已保存: ' + path)
+    }
+  }
+
   let editingPath = ''
   const edBox = document.getElementById('editor')
   const edText = document.getElementById('ed-text')
@@ -443,6 +505,7 @@
 
   document.getElementById('ed-close').onclick = () => {
     edBox.style.display = 'none'
+    postEditing = null
   }
 
   document.getElementById('ed-save').onclick = () => {
