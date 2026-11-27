@@ -120,6 +120,9 @@
   @keyframes spin{to{transform:rotate(360deg)}}
   .splash-title{font-size:19px;font-weight:600;letter-spacing:-.01em}
   .splash-stage{font-size:14px;color:var(--muted);max-width:78%}
+  .bar{width:min(280px,72vw);height:6px;border-radius:3px;background:rgba(127,127,127,.22);overflow:hidden}
+  .bar > i{display:block;height:100%;width:0%;border-radius:3px;
+    background:linear-gradient(90deg,#0a84ff,#64d2ff);transition:width .3s ease}
   .splash-hint{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 24px);font-size:12px;color:var(--muted)}
 </style>
 </head>
@@ -128,8 +131,9 @@
 <div id="splash">
   <div class="ring"></div>
   <div class="splash-title">正在准备运行环境</div>
+  <div class="bar"><i id="splash-bar"></i></div>
   <div class="splash-stage" id="splash-stage">首次启动需要解压约 500 MB，请勿退出</div>
-  <div class="splash-hint">心记管理</div>
+  <div class="splash-hint" id="splash-elapsed">心记管理</div>
 </div>
 
 <div class="wrap" id="main" style="display:none">
@@ -211,6 +215,20 @@
 
   function setTone(t) {
     dotEl.className = 'dot' + (t ? ' ' + t : '')
+  }
+
+  const t0 = Date.now()
+  setInterval(() => {
+    const el = document.getElementById('splash-elapsed')
+    const sp = document.getElementById('splash')
+    if (el && sp && sp.style.display !== 'none') {
+      el.textContent = '已用 ' + Math.floor((Date.now() - t0) / 1000) + ' 秒'
+    }
+  }, 1000)
+
+  window.__progress = (pct) => {
+    const bar = document.getElementById('splash-bar')
+    if (bar) bar.style.width = Math.max(0, Math.min(100, pct)) + '%'
   }
 
   window.__stage = (msg) => {
