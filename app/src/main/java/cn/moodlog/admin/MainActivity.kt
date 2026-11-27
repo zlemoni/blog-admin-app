@@ -629,6 +629,41 @@ class MainActivity : AppCompatActivity() {
             return o.toString()
         }
 
+        /** 用 token 新建项目（无需去网页） */
+        @JavascriptInterface
+        fun createProject(name: String) {
+            io.execute {
+                try {
+                    val token = prefs().getString("vercelToken", "") ?: ""
+                    if (token.isEmpty()) { stage("请先填写 Vercel Token"); return@execute }
+                    val proj = name.trim()
+                    if (proj.isEmpty()) { stage("请填写项目名（小写字母/数字/中划线）"); return@execute }
+
+                    stage("创建项目 $proj …")
+                    val body = JSONObject().apply {
+                        put("name", proj)
+                        put("framework", JSONObject.NULL)
+                    }.toString()
+                    val resp = httpJson(vercelApi + "/v10/projects", "POST", token, body)
+                    val o = JSONObject(resp)
+                    val created = o.optString("name")
+                    log("项目已创建: $created")
+                    prefs().edit().putString("vercelProject", created).apply()
+                    stage("✓ 项目已创建: $created")
+                    js("window.__projectCreated && window.__projectCreated('" + esc(created) + "')")
+                } catch (e: Throwable) {
+                    val msg = e.message ?: ""
+                    if (msg.contains("409") || msg.contains("already exists")) {
+                        stage("项目已存在，可直接用于发布")
+                        prefs().edit().putString("vercelProject", name.trim()).apply()
+                    } else {
+                        log("创建项目失败: $msg")
+                        stage("✗ 创建项目失败: $msg")
+                    }
+                }
+            }
+        }
+
         /** 通过 GitHub 推送 dist，让 Vercel 的 Git 集成自动构建部署（绕过 api.vercel.com） */
         @JavascriptInterface
         fun pushToGitHub() {
