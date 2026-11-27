@@ -7,30 +7,21 @@
 <title>心记管理</title>
 <style>
   :root{
-    --bg:#f5f5f7;
-    --bg2:#e8ecf5;
-    --glass:rgba(255,255,255,.62);
-    --glass-strong:rgba(255,255,255,.78);
+    --bg:#f5f5f7; --bg2:#e8ecf5;
+    --glass:rgba(255,255,255,.62); --glass-strong:rgba(255,255,255,.8);
     --stroke:rgba(255,255,255,.85);
-    --text:#1d1d1f;
-    --muted:#6e6e73;
-    --accent:#0071e3;
-    --accent-soft:rgba(0,113,227,.12);
-    --danger:#ff3b30;
-    --good:#34c759;
+    --text:#1d1d1f; --muted:#6e6e73;
+    --accent:#0071e3; --accent-soft:rgba(0,113,227,.12);
+    --danger:#ff3b30; --good:#34c759;
     --shadow:0 12px 40px rgba(0,0,0,.10);
   }
   @media (prefers-color-scheme:dark){
     :root{
-      --bg:#000;
-      --bg2:#0d1220;
-      --glass:rgba(28,28,30,.62);
-      --glass-strong:rgba(38,38,42,.78);
+      --bg:#000; --bg2:#0d1220;
+      --glass:rgba(28,28,30,.62); --glass-strong:rgba(38,38,42,.8);
       --stroke:rgba(255,255,255,.12);
-      --text:#f5f5f7;
-      --muted:#98989d;
-      --accent:#0a84ff;
-      --accent-soft:rgba(10,132,255,.18);
+      --text:#f5f5f7; --muted:#98989d;
+      --accent:#0a84ff; --accent-soft:rgba(10,132,255,.18);
       --shadow:0 12px 40px rgba(0,0,0,.55);
     }
   }
@@ -44,43 +35,58 @@
       radial-gradient(900px 500px at 100% 0%, rgba(255,45,85,.14), transparent 55%),
       radial-gradient(900px 600px at 50% 110%, rgba(52,199,89,.14), transparent 60%),
       linear-gradient(180deg,var(--bg),var(--bg2));
-    background-attachment:fixed;
-    min-height:100%;
+    background-attachment:fixed;min-height:100%;
   }
-  .wrap{max-width:680px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 18px) 16px 32px}
 
-  h1{font-size:32px;line-height:1.15;letter-spacing:-.02em;font-weight:700;margin:6px 0 2px}
-  .sub{color:var(--muted);font-size:14px;margin:0 0 18px}
+  /* 顶栏 */
+  header{
+    position:sticky;top:0;z-index:40;
+    display:flex;align-items:center;gap:12px;
+    padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;
+    background:var(--glass);
+    -webkit-backdrop-filter:blur(24px) saturate(180%);
+    backdrop-filter:blur(24px) saturate(180%);
+    border-bottom:1px solid var(--stroke);
+  }
+  header .menu{
+    width:38px;height:38px;flex:0 0 auto;padding:0;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--glass-strong);border:1px solid var(--stroke);font-size:17px
+  }
+  header h1{font-size:17px;margin:0;font-weight:600;letter-spacing:-.01em;flex:1}
+  header .ver{font-size:12px;color:var(--muted)}
+
+  .wrap{max-width:680px;margin:0 auto;padding:16px 16px 40px}
+  .page{display:none}
+  .page.active{display:block}
 
   .card{
     background:var(--glass);
     -webkit-backdrop-filter:blur(30px) saturate(180%);
     backdrop-filter:blur(30px) saturate(180%);
-    border:1px solid var(--stroke);
-    border-radius:22px;
-    padding:16px;
-    margin-bottom:14px;
-    box-shadow:var(--shadow);
+    border:1px solid var(--stroke);border-radius:22px;
+    padding:16px;margin-bottom:14px;box-shadow:var(--shadow);
   }
   .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  h2{font-size:22px;margin:4px 0 14px;font-weight:700;letter-spacing:-.02em}
 
   button{
-    font:inherit;font-weight:600;font-size:15px;
-    padding:12px 18px;border-radius:999px;border:1px solid transparent;
-    background:var(--glass-strong);color:var(--text);
-    -webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
-    transition:transform .16s ease,opacity .16s ease;
-    flex:1;min-width:120px;
+    font:inherit;font-weight:600;font-size:15px;padding:12px 18px;border-radius:999px;
+    border:1px solid transparent;background:var(--glass-strong);color:var(--text);
+    transition:transform .16s ease,opacity .16s ease;flex:1;min-width:120px;
   }
   button:active{transform:scale(.97);opacity:.85}
   button:disabled{opacity:.45;transform:none}
   button.primary{background:var(--accent);color:#fff;box-shadow:0 6px 20px rgba(0,113,227,.35)}
-  button.ghost{background:transparent;border-color:var(--stroke);color:var(--text)}
+  button.ghost{background:transparent;border-color:var(--stroke)}
   button.danger{color:var(--danger)}
   button.small{flex:0 0 auto;min-width:auto;padding:9px 14px;font-size:14px}
 
-  .verbar{display:flex;align-items:center;justify-content:space-between;gap:10px}
-  .ver{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+  input{
+    flex:1;min-width:130px;font:inherit;font-size:14px;padding:11px 14px;border-radius:14px;
+    border:1px solid var(--stroke);background:var(--glass-strong);color:var(--text);
+  }
+  input::placeholder{color:var(--muted)}
 
   .status{display:flex;align-items:center;gap:9px;font-size:14px;color:var(--muted);margin-top:12px}
   .dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:0 0 auto}
@@ -88,48 +94,70 @@
   .dot.bad{background:var(--danger);box-shadow:0 0 0 4px rgba(255,59,48,.16)}
   .dot.run{background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
 
-  input{
-    flex:1;min-width:130px;font:inherit;font-size:14px;padding:11px 14px;border-radius:14px;
-    border:1px solid var(--stroke);background:var(--glass-strong);color:var(--text);
-    -webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
+  pre{
+    margin:14px 0 0;padding:14px;border-radius:16px;background:rgba(0,0,0,.04);
+    border:1px solid var(--stroke);height:40vh;overflow:auto;white-space:pre-wrap;
+    word-break:break-word;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;
   }
-  input::placeholder{color:var(--muted)}
-  .filelist{max-height:38vh;overflow:auto;margin-top:10px;border-radius:14px}
+  @media (prefers-color-scheme:dark){ pre{background:rgba(255,255,255,.05)} }
+
+  .filelist{max-height:46vh;overflow:auto;margin-top:10px}
   .filelist button{display:block;width:100%;text-align:left;margin-bottom:6px;
     font-weight:500;font-size:14px;padding:11px 14px}
+
+  /* 轻提示 */
+  #toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);transform:translateX(-50%) translateY(12px);
+    max-width:86vw;padding:11px 18px;border-radius:999px;font-size:14px;font-weight:500;
+    background:var(--glass-strong);color:var(--text);border:1px solid var(--stroke);
+    -webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);
+    box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;z-index:70}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* 抽屉 */
+  #drawer{
+    position:fixed;inset:0;z-index:60;display:none;
+  }
+  #drawer .mask{position:absolute;inset:0;background:rgba(0,0,0,.28);
+    -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+  #drawer .panel{
+    position:absolute;top:0;bottom:0;left:0;width:78%;max-width:320px;
+    background:var(--glass-strong);
+    -webkit-backdrop-filter:blur(40px) saturate(180%);
+    backdrop-filter:blur(40px) saturate(180%);
+    border-right:1px solid var(--stroke);
+    padding:calc(env(safe-area-inset-top) + 22px) 16px calc(env(safe-area-inset-bottom) + 16px);
+    display:flex;flex-direction:column;gap:6px;
+    animation:slide .22s ease;
+  }
+  @keyframes slide{from{transform:translateX(-100%)}to{transform:translateX(0)}}
+  #drawer .brand{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0 0 4px 8px}
+  #drawer .sub{font-size:12px;color:var(--muted);margin:0 0 14px 8px}
+  #drawer button{
+    flex:none;width:100%;text-align:left;background:transparent;border:none;
+    padding:13px 14px;border-radius:14px;font-size:15px;font-weight:500;color:var(--text)
+  }
+  #drawer button.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+  #drawer .foot{margin-top:auto;font-size:12px;color:var(--muted);padding:8px}
+
+  /* 编辑器 */
   #editor{position:fixed;inset:0;z-index:80;display:none;flex-direction:column;
     background:var(--bg);padding:calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 12px)}
   #editor .head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
   #editor .head .path{flex:1;font-size:13px;color:var(--muted);word-break:break-all}
   #editor textarea{flex:1;width:100%;border-radius:16px;border:1px solid var(--stroke);
-    background:var(--glass-strong);color:var(--text);padding:12px;font:12px/1.6 ui-monospace,Menlo,monospace;
-    resize:none;outline:none}
-  pre{
-    margin:14px 0 0;padding:14px;border-radius:16px;
-    background:rgba(0,0,0,.04);border:1px solid var(--stroke);
-    height:44vh;overflow:auto;white-space:pre-wrap;word-break:break-word;
-    font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--text);
-  }
-  @media (prefers-color-scheme:dark){ pre{background:rgba(255,255,255,.05)} }
-
-  .upd{margin-top:10px;font-size:14px;display:none}
-  .upd.show{display:block}
-  .upd .ver-line{color:var(--muted);margin-bottom:8px}
+    background:var(--glass-strong);color:var(--text);padding:12px;
+    font:12px/1.6 ui-monospace,Menlo,monospace;resize:none;outline:none}
 
   /* 启动遮罩 */
-  #splash{
-    position:fixed;inset:0;z-index:99;display:flex;flex-direction:column;
+  #splash{position:fixed;inset:0;z-index:99;display:flex;flex-direction:column;
     align-items:center;justify-content:center;gap:16px;padding:28px;text-align:center;
-    background:
-      radial-gradient(800px 400px at 50% 0%, rgba(0,113,227,.22), transparent 60%),
-      linear-gradient(180deg,var(--bg),var(--bg2));
-  }
-  .ring{width:46px;height:46px;border-radius:50%;
-    border:3px solid rgba(127,127,127,.22);border-top-color:var(--accent);
-    animation:spin .9s linear infinite}
+    background:radial-gradient(800px 400px at 50% 0%, rgba(0,113,227,.22), transparent 60%),
+      linear-gradient(180deg,var(--bg),var(--bg2))}
+  .ring{width:46px;height:46px;border-radius:50%;border:3px solid rgba(127,127,127,.22);
+    border-top-color:var(--accent);animation:spin .9s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
-  .splash-title{font-size:19px;font-weight:600;letter-spacing:-.01em}
-  .splash-stage{font-size:14px;color:var(--muted);max-width:78%}
+  .splash-title{font-size:19px;font-weight:600}
+  .splash-stage{font-size:14px;color:var(--muted);max-width:80%}
   .bar{width:min(280px,72vw);height:6px;border-radius:3px;background:rgba(127,127,127,.22);overflow:hidden}
   .bar > i{display:block;height:100%;width:0%;border-radius:3px;
     background:linear-gradient(90deg,#0a84ff,#64d2ff);transition:width .3s ease}
@@ -146,111 +174,163 @@
   <div class="splash-hint" id="splash-elapsed">心记管理</div>
 </div>
 
+<header id="topbar" style="display:none">
+  <button class="menu" id="btn-menu">☰</button>
+  <h1 id="page-title">构建</h1>
+  <span class="ver" id="ver-text"></span>
+</header>
+
+<div id="toast"></div>
+
+<div id="drawer">
+  <div class="mask" id="drawer-mask"></div>
+  <div class="panel">
+    <p class="brand">心记管理</p>
+    <p class="sub">本地构建 · 预览 · 发布</p>
+    <button data-page="build" class="on">构建与预览</button>
+    <button data-page="posts">文章与图片</button>
+    <button data-page="theme">主题</button>
+    <button data-page="comments">评论</button>
+    <button data-page="deploy">发布</button>
+    <button data-page="env">环境</button>
+    <div class="foot" id="drawer-ver"></div>
+  </div>
+</div>
+
 <div class="wrap" id="main" style="display:none">
-  <h1>心记管理</h1>
-  <p class="sub">本地构建 · 本地预览 · 发布到 Vercel</p>
 
-  <div class="card">
-    <div class="verbar">
-      <span class="ver" id="ver-text">版本 …</span>
-      <button class="small ghost" id="btn-update" style="flex:0 0 auto">检查更新</button>
+  <!-- 构建 -->
+  <section class="page active" id="page-build">
+    <div class="card">
+      <div class="row">
+        <button id="btn-build" class="primary">构建</button>
+        <button id="btn-preview">预览</button>
+      </div>
+      <div class="status"><span class="dot" id="dot"></span><span id="state">未知</span></div>
+      <pre id="log"></pre>
     </div>
-    <div class="upd" id="update-box"></div>
-  </div>
+  </section>
 
-  <div class="card">
-    <div class="row">
-      <button id="btn-build" class="primary">构建</button>
-      <button id="btn-preview">预览</button>
+  <!-- 文章 -->
+  <section class="page" id="page-posts">
+    <h2>文章</h2>
+    <div class="card">
+      <div class="row" style="margin-bottom:10px">
+        <button class="ghost" id="btn-posts">刷新列表</button>
+        <button class="ghost" id="btn-newpost">新建文章</button>
+      </div>
+      <div class="filelist" id="post-list"></div>
     </div>
-    <div class="status"><span class="dot" id="dot"></span><span id="state">未知</span></div>
-    <pre id="log"></pre>
-  </div>
+    <div class="card">
+      <div class="row">
+        <input id="img-q" placeholder="图片质量 30-100（默认 80）" inputmode="numeric">
+        <button class="ghost small" id="btn-image">插入图片</button>
+      </div>
+    </div>
+  </section>
 
-  <div class="card">
-    <div class="row" style="margin-bottom:10px">
-      <button class="ghost" id="btn-posts">文章列表</button>
-      <button class="ghost" id="btn-newpost">新建文章</button>
+  <!-- 主题 -->
+  <section class="page" id="page-theme">
+    <h2>主题</h2>
+    <div class="card">
+      <div class="row" style="margin-bottom:10px">
+        <button class="ghost" id="btn-theme">浏览文件</button>
+      </div>
+      <div class="filelist" id="theme-files"></div>
+      <div class="status"><span class="dot"></span><span>改完需重新构建才生效</span></div>
     </div>
-    <div class="filelist" id="post-list" style="display:none"></div>
-    <div class="row" style="margin-top:10px">
-      <input id="img-q" placeholder="图片质量 30-100（默认 80）" inputmode="numeric" style="max-width:180px">
-      <button class="ghost small" id="btn-image">插入图片</button>
-    </div>
-  </div>
+  </section>
 
-  <div class="card">
-    <div class="row" style="margin-bottom:10px">
-      <input id="wl-email" placeholder="Waline 管理员邮箱" autocapitalize="off">
-      <input id="wl-pass" type="password" placeholder="密码" autocomplete="off">
+  <!-- 评论 -->
+  <section class="page" id="page-comments">
+    <h2>评论</h2>
+    <div class="card">
+      <div class="row" style="margin-bottom:10px">
+        <input id="wl-email" placeholder="Waline 管理员邮箱" autocapitalize="off">
+        <input id="wl-pass" type="password" placeholder="密码" autocomplete="off">
+      </div>
+      <div class="row" style="margin-bottom:10px">
+        <input id="wl-url" placeholder="https://c.moodlog.cn/waline" autocapitalize="off">
+      </div>
+      <div class="row">
+        <button class="ghost" id="btn-wl-login">登录</button>
+        <button class="ghost" id="btn-wl-load">加载待审</button>
+      </div>
+      <div class="filelist" id="wl-list"></div>
     </div>
-    <div class="row" style="margin-bottom:10px">
-      <input id="wl-url" placeholder="https://c.moodlog.cn/waline" autocapitalize="off">
-    </div>
-    <div class="row" style="margin-bottom:10px">
-      <button class="ghost" id="btn-wl-login">登录 Waline</button>
-      <button class="ghost" id="btn-wl-load">加载待审</button>
-    </div>
-    <div class="filelist" id="wl-list" style="display:none"></div>
-  </div>
+  </section>
 
-  <div class="card">
-    <div class="row">
-      <button class="ghost" id="btn-theme">主题文件</button>
+  <!-- 发布 -->
+  <section class="page" id="page-deploy">
+    <h2>发布</h2>
+    <div class="card">
+      <div class="row" style="margin-bottom:10px">
+        <input id="vc-token" type="password" placeholder="Vercel Token" autocomplete="off">
+      </div>
+      <div class="row" style="margin-bottom:10px">
+        <button class="ghost small" id="btn-projects" style="flex:1">获取项目列表</button>
+        <button class="ghost small" id="btn-create" style="flex:1">新建项目</button>
+      </div>
+      <div id="proj-list" style="margin-bottom:10px"></div>
+      <div class="row" style="margin-bottom:10px">
+        <input id="vc-project" placeholder="项目名" autocapitalize="off">
+      </div>
+      <div class="row" style="margin-bottom:10px">
+        <button class="ghost" id="btn-deploy">发布到 Vercel</button>
+      </div>
+      <div class="row" style="margin-bottom:10px">
+        <button class="ghost small" id="btn-save" style="flex:1">保存配置</button>
+      </div>
     </div>
-    <div class="filelist" id="theme-files" style="display:none"></div>
-    <div class="status"><span class="dot"></span><span id="theme-hint">修改后需重新构建才会生效</span></div>
-  </div>
+    <div class="card">
+      <div class="row" style="margin-bottom:10px">
+        <input id="gh-token" type="password" placeholder="GitHub Token" autocomplete="off">
+      </div>
+      <div class="row" style="margin-bottom:10px">
+        <input id="gh-repo" placeholder="仓库 owner/repo" autocapitalize="off">
+        <input id="gh-branch" placeholder="分支" autocapitalize="off" style="max-width:110px">
+      </div>
+      <div class="row">
+        <button class="primary" id="btn-push">推送到 GitHub</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row">
+        <input id="px-host" placeholder="代理地址（可选）" autocapitalize="off">
+        <input id="px-port" placeholder="端口" inputmode="numeric" style="max-width:110px">
+      </div>
+    </div>
+  </section>
 
-  <div id="editor">
-    <div class="head">
-      <button class="small ghost" id="ed-close" style="flex:0 0 auto">关闭</button>
-      <span class="path" id="ed-path"></span>
-      <button class="small primary" id="ed-save" style="flex:0 0 auto">保存</button>
+  <!-- 环境 -->
+  <section class="page" id="page-env">
+    <h2>环境</h2>
+    <div class="card">
+      <div class="row" style="margin-bottom:10px">
+        <button class="ghost" id="btn-update">检查更新</button>
+        <button class="ghost" id="btn-net">网络诊断</button>
+      </div>
+      <div id="update-box" style="font-size:14px"></div>
     </div>
-    <textarea id="ed-text" spellcheck="false"></textarea>
-  </div>
+    <div class="card">
+      <div class="row" style="margin-bottom:10px">
+        <button class="ghost" id="btn-diag">自检</button>
+        <button class="ghost" id="btn-install">安装环境</button>
+      </div>
+      <div class="row">
+        <button class="ghost danger" id="btn-clear">清除环境</button>
+      </div>
+    </div>
+  </section>
+</div>
 
-  <div class="card">
-    <div class="row" style="margin-bottom:10px">
-      <input id="vc-token" type="password" placeholder="Vercel Token" autocomplete="off">
-    </div>
-    <div class="row" style="margin-bottom:10px">
-      <button class="ghost small" id="btn-projects" style="flex:1">获取项目列表</button>
-      <button class="ghost small" id="btn-create" style="flex:1">新建项目</button>
-    </div>
-    <div id="proj-list" style="display:none;margin-bottom:10px"></div>
-    <div class="row" style="margin-bottom:10px">
-      <input id="vc-project" placeholder="项目名（可手填，或从上面选）" autocapitalize="off">
-    </div>
-    <div class="row" style="margin-bottom:10px">
-      <input id="px-host" placeholder="代理地址（可选，如 127.0.0.1）" autocapitalize="off">
-      <input id="px-port" placeholder="端口" inputmode="numeric">
-    </div>
-    <div class="row" style="margin-bottom:10px">
-      <input id="gh-token" type="password" placeholder="GitHub Token（推送用）" autocomplete="off">
-    </div>
-    <div class="row" style="margin-bottom:10px">
-      <input id="gh-repo" placeholder="仓库 owner/repo" autocapitalize="off">
-      <input id="gh-branch" placeholder="分支" autocapitalize="off" style="max-width:110px">
-    </div>
-    <div class="row" style="margin-bottom:10px">
-      <button class="ghost" id="btn-save">保存配置</button>
-    </div>
-    <div class="row">
-      <button class="ghost" id="btn-deploy">发布（Vercel API）</button>
-      <button class="primary" id="btn-push">推送到 GitHub</button>
-    </div>
+<div id="editor">
+  <div class="head">
+    <button class="small ghost" id="ed-close" style="flex:0 0 auto">关闭</button>
+    <span class="path" id="ed-path"></span>
+    <button class="small primary" id="ed-save" style="flex:0 0 auto">保存</button>
   </div>
-
-  <div class="card">
-    <div class="row">
-      <button class="ghost small" id="btn-diag" style="flex:1">自检</button>
-      <button class="ghost small" id="btn-install" style="flex:1">安装环境</button>
-      <button class="ghost small danger" id="btn-clear" style="flex:1">清除环境</button>
-      <button class="ghost small" id="btn-net" style="flex:1">网络诊断</button>
-    </div>
-  </div>
+  <textarea id="ed-text" spellcheck="false"></textarea>
 </div>
 
 <script>
@@ -258,28 +338,15 @@
   const stateEl = document.getElementById('state')
   const dotEl = document.getElementById('dot')
   const splashStage = document.getElementById('splash-stage')
-  const btnBuild = document.getElementById('btn-build')
-  const btnPreview = document.getElementById('btn-preview')
-  const btnDiag = document.getElementById('btn-diag')
-  const btnInstall = document.getElementById('btn-install')
-  const btnClear = document.getElementById('btn-clear')
 
-  window.__log = (line) => {
-    logEl.textContent += line + '\n'
-    logEl.scrollTop = logEl.scrollHeight
-  }
-
-  function setTone(t) {
-    dotEl.className = 'dot' + (t ? ' ' + t : '')
-  }
+  window.__log = (line) => { logEl.textContent += line + '\n'; logEl.scrollTop = logEl.scrollHeight }
+  function setTone(t){ dotEl.className = 'dot' + (t ? ' ' + t : '') }
 
   const t0 = Date.now()
   setInterval(() => {
     const el = document.getElementById('splash-elapsed')
     const sp = document.getElementById('splash')
-    if (el && sp && sp.style.display !== 'none') {
-      el.textContent = '已用 ' + Math.floor((Date.now() - t0) / 1000) + ' 秒'
-    }
+    if (el && sp && sp.style.display !== 'none') el.textContent = '已用 ' + Math.floor((Date.now()-t0)/1000) + ' 秒'
   }, 1000)
 
   window.__progress = (pct) => {
@@ -287,161 +354,133 @@
     if (bar) bar.style.width = Math.max(0, Math.min(100, pct)) + '%'
   }
 
+  let toastTimer = null
+  function toast(msg){
+    const el = document.getElementById('toast')
+    if (!el) return
+    el.textContent = msg
+    el.classList.add('show')
+    clearTimeout(toastTimer)
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2600)
+  }
+
   window.__stage = (msg) => {
     stateEl.textContent = msg
+    if (msg && !msg.startsWith('下载') && !msg.startsWith('正在解压')) toast(msg)
     if (splashStage) splashStage.textContent = msg
     if (msg.startsWith('✓') || msg.indexOf('就绪') >= 0) setTone('good')
     else if (msg.startsWith('✗')) setTone('bad')
     else setTone('run')
   }
 
-  window.__buildDone = (code) => {
-    btnBuild.disabled = false
-    btnPreview.disabled = false
-    btnDiag.disabled = false
-    btnInstall.disabled = false
+  // ---------- 侧边栏 ----------
+  const drawer = document.getElementById('drawer')
+  const titles = {build:'构建与预览', posts:'文章与图片', theme:'主题', comments:'评论', deploy:'发布', env:'环境'}
+  function showPage(name){
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'))
+    const el = document.getElementById('page-' + name)
+    if (el) el.classList.add('active')
+    document.getElementById('page-title').textContent = titles[name] || name
+    document.querySelectorAll('#drawer button[data-page]').forEach(b =>
+      b.classList.toggle('on', b.dataset.page === name))
+    drawer.style.display = 'none'
   }
+  document.getElementById('btn-menu').onclick = () => { drawer.style.display = 'block' }
+  document.getElementById('drawer-mask').onclick = () => { drawer.style.display = 'none' }
+  document.querySelectorAll('#drawer button[data-page]').forEach(b => {
+    b.onclick = () => showPage(b.dataset.page)
+  })
 
-  // 更新
-  window.__update = (jsonStr) => {
-    try {
-      const d = JSON.parse(jsonStr)
-      const box = document.getElementById('update-box')
-      document.getElementById('ver-text').textContent = '当前 ' + d.current
-      box.classList.add('show')
-      if (d.hasUpdate) {
-        box.innerHTML = '<div class="ver-line">发现新版本 <b>' + d.latest + '</b></div>'
-          + '<div class="row"><button class="small primary" id="dl1">应用内下载（镜像）</button>'
-          + '<button class="small ghost" id="dl2">直链下载</button></div>'
-        const go = (url, btn) => {
-          btn.disabled = true; btn.textContent = '下载中…'
-          logEl.textContent = ''
-          try { Native.downloadUpdate(url) } catch (e) { window.__log('调用失败: ' + e) }
-        }
-        document.getElementById('dl1').onclick = (e) => go(d.mirror, e.target)
-        document.getElementById('dl2').onclick = (e) => go(d.direct, e.target)
-      } else {
-        box.innerHTML = '<div class="ver-line">已是最新版本</div>'
-      }
-    } catch (e) {
-      document.getElementById('update-box').textContent = '解析失败: ' + e
-    }
-  }
-  window.__updateErr = (msg) => {
-    const box = document.getElementById('update-box')
-    box.classList.add('show')
-    box.textContent = '检查失败: ' + msg
-  }
-
-  // 启动
-  window.__envReady = () => {
-    document.getElementById('splash').style.display = 'none'
-    document.getElementById('main').style.display = 'block'
-    setTone('good')
-    stateEl.textContent = '环境就绪'
-    loadCfg()
-  }
-  window.__envError = (msg) => {
-    document.getElementById('splash-stage').textContent = '安装失败：' + msg
-    const b = document.createElement('button')
-    b.textContent = '重试'
-    b.className = 'primary'
-    b.style.marginTop = '14px'
-    b.onclick = () => location.reload()
-    document.getElementById('splash').appendChild(b)
-  }
-
-  document.getElementById('btn-update').onclick = () => {
-    const b = document.getElementById('btn-update')
-    b.disabled = true
-    try { Native.checkUpdate() } catch (e) { window.__updateErr('调用失败') }
-    setTimeout(() => { b.disabled = false }, 1200)
-  }
-
-  btnInstall.onclick = () => {
-    btnInstall.disabled = true
-    logEl.textContent = ''
-    try { Native.install() } catch (e) { window.__log('调用失败: ' + e) }
-  }
-
-  let clearArmed = false, clearTimer = null
-  btnClear.onclick = () => {
-    if (!clearArmed) {
-      clearArmed = true
-      btnClear.textContent = '再点一次确认'
-      btnClear.style.color = 'var(--danger)'
-      clearTimeout(clearTimer)
-      clearTimer = setTimeout(() => {
-        clearArmed = false
-        btnClear.textContent = '清除环境'
-        btnClear.style.color = ''
-      }, 5000)
-      return
-    }
-    clearArmed = false
-    clearTimeout(clearTimer)
-    btnClear.textContent = '清除环境'
-    btnClear.style.color = ''
-    logEl.textContent = ''
-    window.__log('开始清除环境…')
-    try { Native.clearEnv() } catch (e) { window.__log('调用失败: ' + e) }
-  }
-
-  btnDiag.onclick = () => {
-    btnDiag.disabled = true
-    logEl.textContent = ''
-    try { Native.diagnose() } catch (e) { window.__log('调用失败: ' + e) }
-    setTimeout(() => { btnDiag.disabled = false }, 800)
-  }
-
-  function loadCfg() {
-    try {
-      const c = JSON.parse(Native.loadConfig())
-      document.getElementById('vc-token').value = c.vercelToken || ''
-      document.getElementById('vc-project').value = c.vercelProject || ''
-      document.getElementById('px-host').value = c.proxyHost || ''
-      document.getElementById('px-port').value = c.proxyPort || ''
-      document.getElementById('gh-token').value = c.ghToken || ''
-      document.getElementById('gh-repo').value = c.ghRepo || ''
-      document.getElementById('gh-branch').value = c.ghBranch || 'main'
-      document.getElementById('wl-url').value = c.walineUrl || 'https://c.moodlog.cn/waline'
-    } catch (e) {}
-  }
-
-  window.__projects = (jsonStr) => {
-    const box = document.getElementById('proj-list')
-    box.style.display = 'block'
-    let list = []
-    try { list = JSON.parse(jsonStr) } catch (e) {}
-    if (!list.length) {
-      box.innerHTML = '<div class="ver" style="color:var(--danger)">未获取到项目（可能需要代理，或 token 无权限）</div>'
-      return
-    }
-    box.innerHTML = '<div class="row">' + list.map(p =>
-      '<button class="small ghost" data-name="' + p.name + '">' + p.name + '</button>').join('') + '</div>'
-    box.querySelectorAll('button').forEach(b => {
-      b.onclick = () => {
-        document.getElementById('vc-project').value = b.dataset.name
-        box.querySelectorAll('button').forEach(x => x.classList.remove('primary'))
-        b.classList.add('primary')
-      }
+  // ---------- 构建 ----------
+  window.__buildDone = () => {
+    ['btn-build','btn-preview','btn-diag','btn-install'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.disabled = false
     })
   }
-
-  document.getElementById('btn-projects').onclick = () => {
-    const b = document.getElementById('btn-projects')
+  document.getElementById('btn-build').onclick = () => {
+    const b = document.getElementById('btn-build')
     b.disabled = true
+    logEl.textContent = ''
+    showPage('build')
+    window.__stage('开始构建…')
+    try { Native.build() } catch (e) { window.__log('调用失败: ' + e); b.disabled = false }
+  }
+  document.getElementById('btn-preview').onclick = () => {
     try {
-      Native.saveConfig('vercelToken', document.getElementById('vc-token').value.trim())
-      Native.saveConfig('proxyHost', document.getElementById('px-host').value.trim())
-      Native.saveConfig('proxyPort', document.getElementById('px-port').value.trim())
-      window.__stage('获取项目列表…')
-      Native.listProjects()
-    } catch (e) { window.__log('调用失败: ' + e) }
-    setTimeout(() => { b.disabled = false }, 1500)
+      Native.preview()
+      const url = Native.previewUrl()
+      setTimeout(() => { window.location.href = url }, 700)
+    } catch (e) { window.__log('预览失败: ' + e) }
   }
 
-  // ---------- Waline ----------
+  // ---------- 文章 ----------
+  let editingPath = ''
+  const edBox = document.getElementById('editor')
+  const edText = document.getElementById('ed-text')
+  const edPathEl = document.getElementById('ed-path')
+
+  function openEditor(path){
+    editingPath = path
+    edPathEl.textContent = path
+    edText.value = Native.readThemeFile(path)
+    edBox.style.display = 'flex'
+  }
+  document.getElementById('ed-close').onclick = () => { edBox.style.display = 'none' }
+  document.getElementById('ed-save').onclick = () => {
+    const r = Native.writeThemeFile(editingPath, edText.value)
+    window.__stage(r === 'ok' ? '✓ 已保存，记得重新构建' : r)
+    if (r === 'ok') edBox.style.display = 'none'
+  }
+
+  function loadPosts(){
+    const box = document.getElementById('post-list')
+    try {
+      const list = JSON.parse(Native.listPosts())
+      if (!list.length) { box.innerHTML = '<div class="status">还没有文章</div>'; return }
+      box.innerHTML = list.map(p =>
+        '<button class="ghost" data-path="' + p.path + '">' + (p.title || p.path) +
+        '<div style="color:var(--muted);font-weight:400;font-size:12px">' + (p.date || '') + '</div></button>').join('')
+      box.querySelectorAll('button').forEach(b => {
+        b.onclick = () => openEditor(b.dataset.path)
+      })
+    } catch (e) { window.__log('读取文章失败: ' + e) }
+  }
+  document.getElementById('btn-posts').onclick = loadPosts
+  document.getElementById('btn-newpost').onclick = () => {
+    const title = prompt('文章标题')
+    if (!title) return
+    try {
+      const r = Native.createPost(title)
+      if (r.indexOf('/') > 0) { window.__stage('✓ 已创建: ' + r.split('/').pop()); loadPosts() }
+      else { window.__stage(r) }
+    } catch (e) { window.__log('创建失败: ' + e) }
+  }
+  document.getElementById('btn-image').onclick = () => {
+    const q = parseInt(document.getElementById('img-q').value || '80', 10)
+    try { Native.pickImage(isNaN(q) ? 80 : q) } catch (e) { window.__log('调用失败: ' + e) }
+  }
+  window.__imageReady = (path) => {
+    if (edBox.style.display === 'flex') {
+      const md = '![](' + path + ')'
+      const t = edText.value
+      const pos = edText.selectionStart || t.length
+      edText.value = t.slice(0, pos) + md + t.slice(pos)
+    } else { window.__log('图片已保存: ' + path) }
+  }
+
+  // ---------- 主题 ----------
+  document.getElementById('btn-theme').onclick = () => {
+    const box = document.getElementById('theme-files')
+    try {
+      const list = JSON.parse(Native.listThemeFiles())
+      box.innerHTML = list.map(f =>
+        '<button class="ghost" data-path="' + f.path + '">' + f.path.replace('src/', '') +
+        ' <span style="color:var(--muted);font-weight:400">' + Math.round(f.size/1024) + 'KB</span></button>').join('')
+      box.querySelectorAll('button').forEach(b => { b.onclick = () => openEditor(b.dataset.path) })
+    } catch (e) { window.__log('读取失败: ' + e) }
+  }
+
+  // ---------- 评论 ----------
   document.getElementById('btn-wl-login').onclick = () => {
     const email = document.getElementById('wl-email').value.trim()
     const pass = document.getElementById('wl-pass').value
@@ -453,41 +492,31 @@
       Native.walineLogin(email, pass)
     } catch (e) { window.__log('调用失败: ' + e) }
   }
-
-  window.__walineLogin = (name) => {
-    window.__stage('✓ Waline 已登录: ' + name)
-  }
-
+  window.__walineLogin = (name) => { window.__stage('✓ Waline 已登录: ' + name) }
   document.getElementById('btn-wl-load').onclick = () => {
     try { Native.walineComments('waiting', 1) } catch (e) { window.__log('调用失败: ' + e) }
   }
-
-  function fmtTime(ts) {
+  function fmtTime(ts){
     if (!ts) return ''
     const d = new Date(ts)
-    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' +
-      String(d.getDate()).padStart(2, '0') + ' ' + String(d.getHours()).padStart(2, '0') + ':' +
-      String(d.getMinutes()).padStart(2, '0')
+    const p = n => String(n).padStart(2, '0')
+    return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes())
   }
-
   window.__comments = (jsonStr) => {
     const box = document.getElementById('wl-list')
-    box.style.display = 'block'
     let list = []
     try { list = JSON.parse(jsonStr) } catch (e) {}
-    if (!list.length) { box.innerHTML = '<div class="ver">没有评论</div>'; return }
+    if (!list.length) { box.innerHTML = '<div class="status">没有评论</div>'; return }
     box.innerHTML = list.map(c =>
       '<div class="card" style="margin:8px 0;padding:12px">' +
-        '<div style="font-size:13px;color:var(--muted);margin-bottom:6px">' +
-          (c.nick || '匿名') + ' · ' + fmtTime(c.time) + '</div>' +
+        '<div style="font-size:13px;color:var(--muted);margin-bottom:6px">' + (c.nick || '匿名') + ' · ' + fmtTime(c.time) + '</div>' +
         '<div style="font-size:14px;margin-bottom:10px;white-space:pre-wrap">' + (c.comment || '') + '</div>' +
         '<div class="row">' +
           '<button class="small primary" data-act="approve" data-id="' + c.id + '">通过</button>' +
           '<button class="small ghost" data-act="spam" data-id="' + c.id + '">垃圾</button>' +
           '<button class="small ghost" data-act="reply" data-id="' + c.id + '">回复</button>' +
           '<button class="small ghost danger" data-act="del" data-id="' + c.id + '">删除</button>' +
-        '</div>' +
-      '</div>').join('')
+        '</div></div>').join('')
     box.querySelectorAll('button').forEach(b => {
       const id = parseInt(b.dataset.id, 10)
       b.onclick = () => {
@@ -495,183 +524,143 @@
         if (act === 'approve') Native.walineSetStatus(id, 'approved')
         else if (act === 'spam') Native.walineSetStatus(id, 'spam')
         else if (act === 'del') Native.walineDelete(id)
-        else if (act === 'reply') {
-          const t = prompt('回复内容')
-          if (t) Native.walineReply(id, t)
-        }
+        else if (act === 'reply') { const t = prompt('回复内容'); if (t) Native.walineReply(id, t) }
       }
     })
   }
 
-  // ---------- 文章 ----------
-  let postEditing = null
-
-  document.getElementById('btn-posts').onclick = () => {
-    const box = document.getElementById('post-list')
-    if (box.style.display === 'block') { box.style.display = 'none'; return }
-    try {
-      const list = JSON.parse(Native.listPosts())
-      if (!list.length) {
-        box.innerHTML = '<div class="ver">还没有文章</div>'
-      } else {
-        box.innerHTML = list.map(p =>
-          '<button class="ghost" data-path="' + p.path + '">' + (p.title || p.path) +
-          '<div style="color:var(--muted);font-weight:400;font-size:12px">' + (p.date || '') + '</div></button>').join('')
-        box.querySelectorAll('button').forEach(b => {
-          b.onclick = () => { postEditing = b.dataset.path; openEditor(b.dataset.path) }
-        })
+  // ---------- 发布 ----------
+  window.__projects = (jsonStr) => {
+    const box = document.getElementById('proj-list')
+    let list = []
+    try { list = JSON.parse(jsonStr) } catch (e) {}
+    if (!list.length) { box.innerHTML = '<div class="status">未获取到项目</div>'; return }
+    box.innerHTML = '<div class="row">' + list.map(p =>
+      '<button class="small ghost" data-name="' + p.name + '">' + p.name + '</button>').join('') + '</div>'
+    box.querySelectorAll('button').forEach(b => {
+      b.onclick = () => {
+        document.getElementById('vc-project').value = b.dataset.name
+        box.querySelectorAll('button').forEach(x => x.classList.remove('primary'))
+        b.classList.add('primary')
       }
-      box.style.display = 'block'
-    } catch (e) { window.__log('读取文章失败: ' + e) }
+    })
   }
-
-  document.getElementById('btn-newpost').onclick = () => {
-    const title = prompt('文章标题')
-    if (!title) return
-    try {
-      const r = Native.createPost(title)
-      if (r.indexOf('/') > 0) {
-        window.__stage('✓ 已创建: ' + r.split('/').pop())
-        document.getElementById('btn-posts').click()
-      } else { window.__stage(r) }
-    } catch (e) { window.__log('创建失败: ' + e) }
-  }
-
-  document.getElementById('btn-image').onclick = () => {
-    const q = parseInt(document.getElementById('img-q').value || '80', 10)
-    try { Native.pickImage(isNaN(q) ? 80 : q) } catch (e) { window.__log('调用失败: ' + e) }
-  }
-
-  window.__imageReady = (path) => {
-    if (edBox.style.display === 'flex') {
-      const md = '![](' + path + ')'
-      const t = edText.value
-      const pos = edText.selectionStart || t.length
-      edText.value = t.slice(0, pos) + md + t.slice(pos)
-    } else {
-      window.__log('图片已保存: ' + path)
-    }
-  }
-
-  let editingPath = ''
-  const edBox = document.getElementById('editor')
-  const edText = document.getElementById('ed-text')
-  const edPathEl = document.getElementById('ed-path')
-
-  document.getElementById('btn-theme').onclick = () => {
-    const box = document.getElementById('theme-files')
-    if (box.style.display === 'block') { box.style.display = 'none'; return }
-    try {
-      const list = JSON.parse(Native.listThemeFiles())
-      box.innerHTML = list.map(f =>
-        '<button class="ghost" data-path="' + f.path + '">' +
-        f.path.replace('src/', '') + ' <span style="color:var(--muted);font-weight:400">' +
-        Math.round(f.size / 1024) + 'KB</span></button>').join('')
-      box.querySelectorAll('button').forEach(b => {
-        b.onclick = () => openEditor(b.dataset.path)
-      })
-      box.style.display = 'block'
-    } catch (e) { window.__log('读取文件列表失败: ' + e) }
-  }
-
-  function openEditor(path) {
-    editingPath = path
-    edPathEl.textContent = path
-    edText.value = Native.readThemeFile(path)
-    edBox.style.display = 'flex'
-  }
-
-  document.getElementById('ed-close').onclick = () => {
-    edBox.style.display = 'none'
-    postEditing = null
-  }
-
-  document.getElementById('ed-save').onclick = () => {
-    const r = Native.writeThemeFile(editingPath, edText.value)
-    window.__stage(r === 'ok' ? '✓ 已保存，记得重新构建' : r)
-    if (r === 'ok') edBox.style.display = 'none'
-  }
-
-  document.getElementById('btn-create').onclick = () => {
-    const name = document.getElementById('vc-project').value.trim()
-    if (!name) { window.__stage('先在项目名输入框填一个名字'); return }
-    try {
-      Native.saveConfig('vercelToken', document.getElementById('vc-token').value.trim())
-      Native.saveConfig('proxyHost', document.getElementById('px-host').value.trim())
-      Native.saveConfig('proxyPort', document.getElementById('px-port').value.trim())
-      window.__stage('创建项目 ' + name + ' …')
-      Native.createProject(name)
-    } catch (e) { window.__log('调用失败: ' + e) }
-  }
-
   window.__projectCreated = (name) => {
     document.getElementById('vc-project').value = name
-    document.getElementById('btn-deploy').disabled = false
+    window.__stage('✓ 项目已创建: ' + name)
+  }
+  window.__deployDone = (url) => {
+    const b = document.getElementById('btn-deploy'); if (b) b.disabled = false
+    window.__log('发布完成: ' + url)
   }
 
-  document.getElementById('btn-save').onclick = () => {
-    try {
-      Native.saveConfig('vercelToken', document.getElementById('vc-token').value.trim())
-      Native.saveConfig('vercelProject', document.getElementById('vc-project').value.trim())
-      Native.saveConfig('proxyHost', document.getElementById('px-host').value.trim())
-      Native.saveConfig('proxyPort', document.getElementById('px-port').value.trim())
-      window.__log('配置已保存')
-      window.__stage('配置已保存')
-    } catch (e) { window.__log('保存失败: ' + e) }
+  function saveDeployCfg(){
+    Native.saveConfig('vercelToken', document.getElementById('vc-token').value.trim())
+    Native.saveConfig('vercelProject', document.getElementById('vc-project').value.trim())
+    Native.saveConfig('ghToken', document.getElementById('gh-token').value.trim())
+    Native.saveConfig('ghRepo', document.getElementById('gh-repo').value.trim())
+    Native.saveConfig('ghBranch', document.getElementById('gh-branch').value.trim() || 'main')
+    Native.saveConfig('proxyHost', document.getElementById('px-host').value.trim())
+    Native.saveConfig('proxyPort', document.getElementById('px-port').value.trim())
   }
-
-  document.getElementById('btn-net').onclick = () => {
-    logEl.textContent = ''
-    window.__stage('网络诊断中…')
-    try { Native.netDiagnose() } catch (e) { window.__log('调用失败: ' + e) }
+  document.getElementById('btn-save').onclick = () => { saveDeployCfg(); window.__stage('配置已保存') }
+  document.getElementById('btn-projects').onclick = () => {
+    saveDeployCfg(); window.__stage('获取项目列表…'); Native.listProjects()
   }
-
-  document.getElementById('btn-push').onclick = () => {
-    const b = document.getElementById('btn-push')
-    b.disabled = true
-    logEl.textContent = ''
-    try {
-      Native.saveConfig('ghToken', document.getElementById('gh-token').value.trim())
-      Native.saveConfig('ghRepo', document.getElementById('gh-repo').value.trim())
-      Native.saveConfig('ghBranch', document.getElementById('gh-branch').value.trim() || 'main')
-      window.__stage('开始推送…')
-      Native.pushToGitHub()
-    } catch (e) { window.__log('调用失败: ' + e) }
-    setTimeout(() => { b.disabled = false }, 3000)
+  document.getElementById('btn-create').onclick = () => {
+    const n = document.getElementById('vc-project').value.trim()
+    if (!n) { window.__stage('先填项目名'); return }
+    saveDeployCfg(); window.__stage('创建 ' + n + ' …'); Native.createProject(n)
   }
-
   document.getElementById('btn-deploy').onclick = () => {
-    const b = document.getElementById('btn-deploy')
-    b.disabled = true
+    saveDeployCfg()
+    const b = document.getElementById('btn-deploy'); b.disabled = true
     logEl.textContent = ''
     try { Native.deployVercel() } catch (e) { window.__log('调用失败: ' + e); b.disabled = false }
   }
-
-  window.__deployDone = (url) => {
-    const b = document.getElementById('btn-deploy')
-    b.disabled = false
-    window.__log('发布完成: ' + url)
-    if (confirm) { /* noop */ }
+  document.getElementById('btn-push').onclick = () => {
+    saveDeployCfg()
+    const b = document.getElementById('btn-push'); b.disabled = true
+    try { window.__stage('开始推送…'); Native.pushToGitHub() } catch (e) { window.__log('调用失败: ' + e) }
+    setTimeout(() => { b.disabled = false }, 3000)
   }
 
-  btnPreview.onclick = () => {
-    btnPreview.disabled = true
+  // ---------- 环境 ----------
+  window.__update = (jsonStr) => {
+    const box = document.getElementById('update-box')
     try {
-      Native.preview()
-      const url = Native.previewUrl()
-      setTimeout(() => { window.location.href = url }, 700)
-    } catch (e) { window.__log('预览失败: ' + e); btnPreview.disabled = false }
+      const d = JSON.parse(jsonStr)
+      document.getElementById('ver-text').textContent = d.current
+      if (d.hasUpdate) {
+        box.innerHTML = '<div>新版本 <b>' + d.latest + '</b></div>'
+          + '<div class="row" style="margin-top:8px">'
+          + '<button class="small primary" id="dl1">应用内下载</button>'
+          + '<button class="small ghost" id="dl2">直链</button></div>'
+        const go = (url, btn) => { btn.disabled = true; btn.textContent = '下载中…'
+          try { Native.downloadUpdate(url) } catch (e) { window.__log('调用失败: ' + e) } }
+        document.getElementById('dl1').onclick = e => go(d.mirror, e.target)
+        document.getElementById('dl2').onclick = e => go(d.direct, e.target)
+      } else { box.textContent = '已是最新版本' }
+    } catch (e) { box.textContent = '解析失败: ' + e }
+  }
+  window.__updateErr = (m) => { document.getElementById('update-box').textContent = '检查失败: ' + m }
+  document.getElementById('btn-update').onclick = () => {
+    try { Native.checkUpdate() } catch (e) { window.__updateErr('调用失败') }
+  }
+  document.getElementById('btn-net').onclick = () => {
+    logEl.textContent = ''; showPage('build')
+    window.__stage('网络诊断中…')
+    try { Native.netDiagnose() } catch (e) { window.__log('调用失败: ' + e) }
+  }
+  document.getElementById('btn-diag').onclick = () => {
+    logEl.textContent = ''; showPage('build')
+    try { Native.diagnose() } catch (e) { window.__log('调用失败: ' + e) }
+  }
+  document.getElementById('btn-install').onclick = () => {
+    logEl.textContent = ''; showPage('build')
+    try { Native.install() } catch (e) { window.__log('调用失败: ' + e) }
+  }
+  let clearArmed = false, clearTimer = null
+  document.getElementById('btn-clear').onclick = (ev) => {
+    const b = ev.target
+    if (!clearArmed) {
+      clearArmed = true; b.textContent = '再点一次确认'; b.style.color = 'var(--danger)'
+      clearTimer = setTimeout(() => { clearArmed = false; b.textContent = '清除环境'; b.style.color = '' }, 5000)
+      return
+    }
+    clearArmed = false; clearTimeout(clearTimer); b.textContent = '清除环境'; b.style.color = ''
+    logEl.textContent = ''; showPage('build'); window.__log('开始清除环境…')
+    try { Native.clearEnv() } catch (e) { window.__log('调用失败: ' + e) }
   }
 
-  btnBuild.onclick = () => {
-    btnBuild.disabled = true
-    btnPreview.disabled = true
-    logEl.textContent = ''
-    window.__stage('开始构建…')
-    try { Native.build() } catch (e) { window.__log('调用失败: ' + e); btnBuild.disabled = false }
+  // ---------- 启动 ----------
+  window.__envReady = () => {
+    document.getElementById('splash').style.display = 'none'
+    document.getElementById('topbar').style.display = 'flex'
+    document.getElementById('main').style.display = 'block'
+    setTone('good'); stateEl.textContent = '环境就绪'
+    try {
+      const c = JSON.parse(Native.loadConfig())
+      document.getElementById('vc-token').value = c.vercelToken || ''
+      document.getElementById('vc-project').value = c.vercelProject || ''
+      document.getElementById('gh-token').value = c.ghToken || ''
+      document.getElementById('gh-repo').value = c.ghRepo || ''
+      document.getElementById('gh-branch').value = c.ghBranch || 'main'
+      document.getElementById('px-host').value = c.proxyHost || ''
+      document.getElementById('px-port').value = c.proxyPort || ''
+      document.getElementById('wl-url').value = c.walineUrl || 'https://c.moodlog.cn/waline'
+      document.getElementById('ver-text').textContent = Native.version()
+      document.getElementById('drawer-ver').textContent = 'v' + Native.version()
+    } catch (e) {}
+  }
+  window.__envError = (msg) => {
+    document.getElementById('splash-stage').textContent = '安装失败：' + msg
+    const b = document.createElement('button')
+    b.textContent = '重试'; b.className = 'primary'; b.style.marginTop = '14px'
+    b.onclick = () => location.reload()
+    document.getElementById('splash').appendChild(b)
   }
 
-  try { document.getElementById('ver-text').textContent = '版本 ' + Native.version() } catch (e) {}
   try { Native.ensureEnv() } catch (e) {
     document.getElementById('splash-stage').textContent = '调用失败: ' + e
   }
