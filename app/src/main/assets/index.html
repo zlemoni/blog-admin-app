@@ -88,6 +88,12 @@
   .dot.bad{background:var(--danger);box-shadow:0 0 0 4px rgba(255,59,48,.16)}
   .dot.run{background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
 
+  input{
+    flex:1;min-width:130px;font:inherit;font-size:14px;padding:11px 14px;border-radius:14px;
+    border:1px solid var(--stroke);background:var(--glass-strong);color:var(--text);
+    -webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
+  }
+  input::placeholder{color:var(--muted)}
   pre{
     margin:14px 0 0;padding:14px;border-radius:16px;
     background:rgba(0,0,0,.04);border:1px solid var(--stroke);
@@ -145,6 +151,19 @@
     </div>
     <div class="status"><span class="dot" id="dot"></span><span id="state">未知</span></div>
     <pre id="log"></pre>
+  </div>
+
+  <div class="card">
+    <div class="row" style="margin-bottom:10px">
+      <input id="vc-token" type="password" placeholder="Vercel Token" autocomplete="off">
+    </div>
+    <div class="row" style="margin-bottom:12px">
+      <input id="vc-project" placeholder="Vercel 项目名（如 moodlog-blog）" autocapitalize="off">
+    </div>
+    <div class="row">
+      <button class="ghost" id="btn-save">保存配置</button>
+      <button class="primary" id="btn-deploy">发布到 Vercel</button>
+    </div>
   </div>
 
   <div class="card">
@@ -228,6 +247,7 @@
     document.getElementById('main').style.display = 'block'
     setTone('good')
     stateEl.textContent = '环境就绪'
+    loadCfg()
   }
   window.__envError = (msg) => {
     document.getElementById('splash-stage').textContent = '安装失败：' + msg
@@ -280,6 +300,37 @@
     logEl.textContent = ''
     try { Native.diagnose() } catch (e) { window.__log('调用失败: ' + e) }
     setTimeout(() => { btnDiag.disabled = false }, 800)
+  }
+
+  function loadCfg() {
+    try {
+      const c = JSON.parse(Native.loadConfig())
+      document.getElementById('vc-token').value = c.vercelToken || ''
+      document.getElementById('vc-project').value = c.vercelProject || ''
+    } catch (e) {}
+  }
+
+  document.getElementById('btn-save').onclick = () => {
+    try {
+      Native.saveConfig('vercelToken', document.getElementById('vc-token').value.trim())
+      Native.saveConfig('vercelProject', document.getElementById('vc-project').value.trim())
+      window.__log('配置已保存')
+      window.__stage('配置已保存')
+    } catch (e) { window.__log('保存失败: ' + e) }
+  }
+
+  document.getElementById('btn-deploy').onclick = () => {
+    const b = document.getElementById('btn-deploy')
+    b.disabled = true
+    logEl.textContent = ''
+    try { Native.deployVercel() } catch (e) { window.__log('调用失败: ' + e); b.disabled = false }
+  }
+
+  window.__deployDone = (url) => {
+    const b = document.getElementById('btn-deploy')
+    b.disabled = false
+    window.__log('发布完成: ' + url)
+    if (confirm) { /* noop */ }
   }
 
   btnPreview.onclick = () => {
