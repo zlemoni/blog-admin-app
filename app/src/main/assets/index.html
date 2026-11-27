@@ -157,8 +157,16 @@
     <div class="row" style="margin-bottom:10px">
       <input id="vc-token" type="password" placeholder="Vercel Token" autocomplete="off">
     </div>
-    <div class="row" style="margin-bottom:12px">
-      <input id="vc-project" placeholder="Vercel 项目名（如 moodlog-blog）" autocapitalize="off">
+    <div class="row" style="margin-bottom:10px">
+      <button class="ghost small" id="btn-projects" style="flex:1">获取项目列表</button>
+    </div>
+    <div id="proj-list" style="display:none;margin-bottom:10px"></div>
+    <div class="row" style="margin-bottom:10px">
+      <input id="vc-project" placeholder="项目名（可手填，或从上面选）" autocapitalize="off">
+    </div>
+    <div class="row" style="margin-bottom:10px">
+      <input id="px-host" placeholder="代理地址（可选，如 127.0.0.1）" autocapitalize="off">
+      <input id="px-port" placeholder="端口" inputmode="numeric">
     </div>
     <div class="row">
       <button class="ghost" id="btn-save">保存配置</button>
@@ -307,13 +315,50 @@
       const c = JSON.parse(Native.loadConfig())
       document.getElementById('vc-token').value = c.vercelToken || ''
       document.getElementById('vc-project').value = c.vercelProject || ''
+      document.getElementById('px-host').value = c.proxyHost || ''
+      document.getElementById('px-port').value = c.proxyPort || ''''
     } catch (e) {}
+  }
+
+  window.__projects = (jsonStr) => {
+    const box = document.getElementById('proj-list')
+    box.style.display = 'block'
+    let list = []
+    try { list = JSON.parse(jsonStr) } catch (e) {}
+    if (!list.length) {
+      box.innerHTML = '<div class="ver" style="color:var(--danger)">未获取到项目（可能需要代理，或 token 无权限）</div>'
+      return
+    }
+    box.innerHTML = '<div class="row">' + list.map(p =>
+      '<button class="small ghost" data-name="' + p.name + '">' + p.name + '</button>').join('') + '</div>'
+    box.querySelectorAll('button').forEach(b => {
+      b.onclick = () => {
+        document.getElementById('vc-project').value = b.dataset.name
+        box.querySelectorAll('button').forEach(x => x.classList.remove('primary'))
+        b.classList.add('primary')
+      }
+    })
+  }
+
+  document.getElementById('btn-projects').onclick = () => {
+    const b = document.getElementById('btn-projects')
+    b.disabled = true
+    try {
+      Native.saveConfig('vercelToken', document.getElementById('vc-token').value.trim())
+      Native.saveConfig('proxyHost', document.getElementById('px-host').value.trim())
+      Native.saveConfig('proxyPort', document.getElementById('px-port').value.trim())
+      window.__stage('获取项目列表…')
+      Native.listProjects()
+    } catch (e) { window.__log('调用失败: ' + e) }
+    setTimeout(() => { b.disabled = false }, 1500)
   }
 
   document.getElementById('btn-save').onclick = () => {
     try {
       Native.saveConfig('vercelToken', document.getElementById('vc-token').value.trim())
       Native.saveConfig('vercelProject', document.getElementById('vc-project').value.trim())
+      Native.saveConfig('proxyHost', document.getElementById('px-host').value.trim())
+      Native.saveConfig('proxyPort', document.getElementById('px-port').value.trim())
       window.__log('配置已保存')
       window.__stage('配置已保存')
     } catch (e) { window.__log('保存失败: ' + e) }
