@@ -1105,12 +1105,18 @@ class MainActivity : AppCompatActivity() {
 
                     // 凭据
                     val p = prefs()
-                    add("Vercel 配置", !p.getString("vercelToken", "").isNullOrEmpty(),
-                        if (p.getString("vercelToken", "").isNullOrEmpty()) "未填 token" else "已填，项目 ${p.getString("vercelProject","")}")
-                    add("Waline 配置", !p.getString("walineToken", "").isNullOrEmpty(),
-                        if (p.getString("walineToken", "").isNullOrEmpty()) "未登录" else p.getString("walineEmail", ""))
-                    add("GitHub 推送", !p.getString("ghToken", "").isNullOrEmpty(),
-                        if (p.getString("ghToken", "").isNullOrEmpty()) "未填 token" else p.getString("ghRepo", ""))
+                    val vToken = p.getString("vercelToken", "") ?: ""
+                    val vProj = p.getString("vercelProject", "") ?: ""
+                    val wToken = p.getString("walineToken", "") ?: ""
+                    val wMail = p.getString("walineEmail", "") ?: ""
+                    val gToken = p.getString("ghToken", "") ?: ""
+                    val gRepo = p.getString("ghRepo", "") ?: ""
+                    add("Vercel 配置", vToken.isNotEmpty(),
+                        if (vToken.isEmpty()) "未填 token" else "已填，项目 $vProj")
+                    add("Waline 配置", wToken.isNotEmpty(),
+                        if (wToken.isEmpty()) "未登录" else wMail)
+                    add("GitHub 推送", gToken.isNotEmpty(),
+                        if (gToken.isEmpty()) "未填 token" else gRepo)
 
                     js("window.__selfTest && window.__selfTest('" + esc(items.toString()) + "')")
                     stage("体检完成")
