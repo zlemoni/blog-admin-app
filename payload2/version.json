@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0-p49",
-  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v1.1.0-p49/app-debug.apk",
-  "notes": "文章管理、图片转 WebP"
+  "version": "1.2.0-p50",
+  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v1.2.0-p50/app-debug.apk",
+  "notes": "Waline 评论管理"
 }
