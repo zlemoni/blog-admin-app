@@ -119,6 +119,21 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
+            // 清空 fonts 后，页面里的 <Font /> 会报 FontFamilyNotFound，一并移除
+            if (text.contains("fonts: [],")) {
+                val srcDir = File(dir, "project/src")
+                if (srcDir.exists()) {
+                    var removed = 0
+                    srcDir.walkTopDown().filter { it.isFile && it.name.endsWith(".astro") }.forEach { f ->
+                        val t0 = f.readText()
+                        val t1 = t0.replace(Regex("<Font\\b[\\s\\S]*?/>"), "")
+                                     .replace(Regex("<Font\\b[\\s\\S]*?</Font>"), "")
+                        if (t1 != t0) { f.writeText(t1); removed++ }
+                    }
+                    if (removed > 0) log("已移除 $removed 个 <Font> 组件（改用系统字体）")
+                }
+            }
+
             if (changed) cfg.writeText(text)
         } catch (e: Throwable) {
             log("配置补丁失败: ${e.message}")
