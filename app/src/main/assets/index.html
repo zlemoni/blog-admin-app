@@ -221,6 +221,7 @@
       <button class="ghost small" id="btn-diag" style="flex:1">自检</button>
       <button class="ghost small" id="btn-install" style="flex:1">安装环境</button>
       <button class="ghost small danger" id="btn-clear" style="flex:1">清除环境</button>
+      <button class="ghost small" id="btn-net" style="flex:1">网络诊断</button>
     </div>
   </div>
 </div>
@@ -476,6 +477,12 @@
       window.__log('配置已保存')
       window.__stage('配置已保存')
     } catch (e) { window.__log('保存失败: ' + e) }
+  }
+
+  document.getElementById('btn-net').onclick = () => {
+    logEl.textContent = ''
+    window.__stage('网络诊断中…')
+    try { Native.netDiagnose() } catch (e) { window.__log('调用失败: ' + e) }
   }
 
   document.getElementById('btn-push').onclick = () => {
