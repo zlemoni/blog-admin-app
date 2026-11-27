@@ -888,28 +888,82 @@ class MainActivity : AppCompatActivity() {
         @JavascriptInterface
         fun createPost(title: String): String {
             return try {
-                val dir = blogDir()
-                dir.mkdirs()
-                val slug = title.trim().lowercase()
+                val root = blogDir()
+                root.mkdirs()
+                val base = title.trim().lowercase()
                     .replace(Regex("[^a-z0-9\\u4e00-\\u9fa5]+"), "-")
                     .trim('-')
-                    .ifEmpty { "untitled-" + System.currentTimeMillis() }
-                val f = File(dir, "$slug.md")
-                if (f.exists()) return "已存在同名文章: ${f.name}"
-                val now = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+                    .ifEmpty { "untitled" }
+                var slug = base
+                var i = 2
+                while (File(root, slug).exists()) { slug = "$base-$i"; i++ }
+
+                // 与主题一致：目录 + index.md
+                val dir = File(root, slug).apply { mkdirs() }
+                val f = File(dir, "index.md")
+                val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
                 f.writeText(
                     "---\n" +
-                    "title: ${title.trim()}\n" +
+                    "title: ${title.trim().take(60)}\n" +
                     "description: ''\n" +
-                    "pubDate: $now\n" +
+                    "publishDate: $today\n" +
                     "draft: true\n" +
-                    "---\n\n在这里开始写正文。\n"
+                    "tags: []\n" +
+                    "---\n\n" +
+                    "在这里开始写正文。\n"
                 )
-                log("已创建文章: ${f.name}")
+                log("已创建文章: $slug/index.md")
                 f.relativeTo(themeRoot()).invariantSeparatorsPath
             } catch (e: Throwable) {
                 "创建失败: ${e.message}"
             }
+        }
+
+        /** .md → .mdx（插入主题组件前需要） */
+        @JavascriptInterface
+        fun convertToMdx(path: String): String {
+            return try {
+                val src = safeThemeFile(path) ?: return "路径不允许"
+                if (!src.exists()) return "文件不存在"
+                if (src.name.endsWith(".mdx")) return "已经是 mdx"
+                val dst = File(src.parentFile, src.nameWithoutExtension + ".mdx")
+                if (dst.exists()) return "目标已存在: ${dst.name}"
+                dst.writeText(src.readText())
+                src.delete()
+                log("已转为 MDX: ${dst.name}")
+                dst.relativeTo(themeRoot()).invariantSeparatorsPath
+            } catch (e: Throwable) {
+                "转换失败: ${e.message}"
+            }
+        }
+
+        /** 扫描文章 frontmatter，找出会让构建失败的缺字段 */
+        @JavascriptInterface
+        fun scanFrontmatter(): String {
+            val out = org.json.JSONArray()
+            try {
+                val root = blogDir()
+                if (!root.exists()) return "[]"
+                root.walkTopDown()
+                    .filter { it.isFile && (it.name.endsWith(".md") || it.name.endsWith(".mdx")) }
+                    .forEach { f ->
+                        val head = try { f.readText().take(1500) } catch (e: Throwable) { "" }
+                        val missing = mutableListOf<String>()
+                        if (!Regex("(?m)^title:").containsMatchIn(head)) missing.add("title")
+                        if (!Regex("(?m)^description:").containsMatchIn(head)) missing.add("description")
+                        if (!Regex("(?m)^(publishDate|pubDate):").containsMatchIn(head)) missing.add("publishDate")
+                        if (Regex("(?m)^pubDate:").containsMatchIn(head)) missing.add("pubDate(应为 publishDate)")
+                        if (missing.isNotEmpty()) {
+                            out.put(JSONObject().apply {
+                                put("path", f.relativeTo(themeRoot()).invariantSeparatorsPath)
+                                put("missing", missing.joinToString(", "))
+                            })
+                        }
+                    }
+            } catch (e: Throwable) {
+                log("扫描失败: ${e.message}")
+            }
+            return out.toString()
         }
 
         @JavascriptInterface
@@ -992,6 +1046,78 @@ class MainActivity : AppCompatActivity() {
                 "ok"
             } catch (e: Throwable) {
                 "保存失败: ${e.message}"
+            }
+        }
+
+        /** 综合体检：返回 JSON 数组 [{name, ok, detail}] */
+        @JavascriptInterface
+        fun selfTest() {
+            io.execute {
+                val items = org.json.JSONArray()
+                fun add(name: String, ok: Boolean, detail: String) {
+                    items.put(JSONObject().apply {
+                        put("name", name); put("ok", ok); put("detail", detail)
+                    })
+                }
+                try {
+                    val dir = payloadDir()
+                    val libDir = File(applicationInfo.nativeLibraryDir)
+                    val rootfs = File(dir, "rootfs")
+                    val project = File(dir, "project")
+
+                    // 环境
+                    add("运行环境", ready(), if (ready()) "版本 $payloadVer" else "未安装或版本不符")
+                    add("proot 与依赖",
+                        File(libDir, "libproot.so").exists() &&
+                            File(libDir, "libtalloc.so").exists() &&
+                            File(libDir, "libandroid-shmem.so").exists() &&
+                            File(libDir, "libproot-loader.so").exists(),
+                        "proot + talloc + shmem + loader")
+                    add("动态链接器", File(rootfs, "lib/ld-linux-aarch64.so.1").exists(),
+                        "/lib/ld-linux-aarch64.so.1")
+
+                    val node = File(rootfs, "usr/local/node/bin/node")
+                    add("node 可执行", node.exists() && node.canExecute(), node.path)
+
+                    // 项目结构
+                    add("项目目录", File(project, "src/content/blog").exists(), project.path)
+                    add("Astro 配置", File(project, "astro.config.ts").exists(), "astro.config.ts")
+                    val astroEntry = File(project, "node_modules/astro/bin/astro.mjs")
+                    add("Astro 入口", astroEntry.exists(), "node_modules/astro/bin/astro.mjs")
+
+                    // 配置补丁状态
+                    val cfgText = try { File(project, "astro.config.ts").readText() } catch (e: Throwable) { "" }
+                    add("图片服务补丁",
+                        cfgText.contains("services/noop") || !cfgText.contains("services/sharp"),
+                        if (cfgText.contains("services/noop")) "已切 noop" else "未打补丁（构建时自动处理）")
+                    add("远程字体", !cfgText.contains("fontProviders.fontshare") || cfgText.contains("fonts: [],"),
+                        "关闭后构建更快")
+
+                    // 上次构建
+                    val dist = File(project, "dist")
+                    val pages = if (dist.exists()) dist.walkTopDown().count { it.isFile && it.name.endsWith(".html") } else 0
+                    add("上次构建", pages > 0, if (pages > 0) "$pages 个页面" else "还没有产物")
+
+                    // frontmatter
+                    val bad = org.json.JSONArray(scanFrontmatter())
+                    add("文章 frontmatter", bad.length() == 0,
+                        if (bad.length() == 0) "全部合法" else "${bad.length()} 篇缺字段")
+
+                    // 凭据
+                    val p = prefs()
+                    add("Vercel 配置", !p.getString("vercelToken", "").isNullOrEmpty(),
+                        if (p.getString("vercelToken", "").isNullOrEmpty()) "未填 token" else "已填，项目 ${p.getString("vercelProject","")}")
+                    add("Waline 配置", !p.getString("walineToken", "").isNullOrEmpty(),
+                        if (p.getString("walineToken", "").isNullOrEmpty()) "未登录" else p.getString("walineEmail", ""))
+                    add("GitHub 推送", !p.getString("ghToken", "").isNullOrEmpty(),
+                        if (p.getString("ghToken", "").isNullOrEmpty()) "未填 token" else p.getString("ghRepo", ""))
+
+                    js("window.__selfTest && window.__selfTest('" + esc(items.toString()) + "')")
+                    stage("体检完成")
+                } catch (e: Throwable) {
+                    log("体检失败: ${e.message}")
+                    stage("✗ 体检失败: ${e.message}")
+                }
             }
         }
 
