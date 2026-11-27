@@ -1,5 +1,5 @@
 {
-  "version": "1.4.0-p53",
-  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v1.4.0-p53/app-debug.apk",
-  "notes": "代码编辑器、Markdown 工具栏、短代码、体检"
+  "version": "1.4.1-p54",
+  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v1.4.1-p54/app-debug.apk",
+  "notes": "文章删除"
 }
