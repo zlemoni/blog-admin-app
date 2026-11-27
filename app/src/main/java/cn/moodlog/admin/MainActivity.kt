@@ -584,6 +584,19 @@ class MainActivity : AppCompatActivity() {
         // ---------- 配置 ----------
         private fun prefs() = getSharedPreferences("cfg", android.content.Context.MODE_PRIVATE)
 
+        /** 统一的连接入口：配置了代理就走代理（Vercel API 在国内常被阻断） */
+        private fun open(url: String): HttpURLConnection {
+            val host = prefs().getString("proxyHost", "") ?: ""
+            val port = prefs().getString("proxyPort", "")?.toIntOrNull() ?: 0
+            return if (host.isNotEmpty() && port > 0) {
+                val proxy = java.net.Proxy(java.net.Proxy.Type.HTTP,
+                    java.net.InetSocketAddress(host, port))
+                URL(url).openConnection(proxy) as HttpURLConnection
+            } else {
+                URL(url).openConnection() as HttpURLConnection
+            }
+        }
+
         @JavascriptInterface
         fun saveConfig(key: String, value: String) {
             prefs().edit().putString(key, value).apply()
@@ -596,7 +609,38 @@ class MainActivity : AppCompatActivity() {
             o.put("vercelToken", p.getString("vercelToken", "") ?: "")
             o.put("vercelProject", p.getString("vercelProject", "") ?: "")
             o.put("walineUrl", p.getString("walineUrl", "https://c.moodlog.cn/waline") ?: "")
+            o.put("proxyHost", p.getString("proxyHost", "") ?: "")
+            o.put("proxyPort", p.getString("proxyPort", "") ?: "")
             return o.toString()
+        }
+
+        /** 用 token 拉取项目列表，供用户选择 */
+        @JavascriptInterface
+        fun listProjects() {
+            io.execute {
+                try {
+                    val token = prefs().getString("vercelToken", "") ?: ""
+                    if (token.isEmpty()) { stage("请先填写 Vercel Token"); return@execute }
+                    stage("获取项目列表…")
+                    val json = httpJson("https://api.vercel.com/v9/projects?limit=100", "GET", token, null)
+                    val arr = JSONObject(json).optJSONArray("projects")
+                    val out = org.json.JSONArray()
+                    if (arr != null) for (i in 0 until arr.length()) {
+                        val o = arr.getJSONObject(i)
+                        out.put(JSONObject().apply {
+                            put("id", o.optString("id"))
+                            put("name", o.optString("name"))
+                        })
+                    }
+                    log("找到 ${out.length()} 个项目")
+                    js("window.__projects && window.__projects('" + esc(out.toString()) + "')")
+                    stage("共 ${out.length()} 个项目")
+                } catch (e: Throwable) {
+                    log("获取项目失败: ${e.message}")
+                    stage("✗ 获取项目失败: ${e.message}")
+                    js("window.__projects && window.__projects('[]')")
+                }
+            }
         }
 
         /** 用 Vercel API 直接上传 dist 并发布（无需 Git） */
@@ -681,7 +725,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         private fun uploadVercelFile(token: String, sha: String, f: File) {
-            val conn = URL("https://api.vercel.com/v2/files").openConnection() as HttpURLConnection
+            val conn = open("https://api.vercel.com/v2/files")
             conn.requestMethod = "POST"
             conn.doOutput = true
             conn.connectTimeout = 20000
@@ -701,7 +745,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         private fun httpJson(url: String, method: String, token: String, body: String?): String {
-            val conn = URL(url).openConnection() as HttpURLConnection
+            val conn = open(url)
             conn.requestMethod = method
             conn.connectTimeout = 20000
             conn.readTimeout = 60000
