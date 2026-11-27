@@ -1,5 +1,5 @@
 {
-  "version": "0.9.5-p46",
-  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.9.5-p46/app-debug.apk",
-  "notes": "支持 API 新建 Vercel 项目"
+  "version": "1.0.0-p47",
+  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v1.0.0-p47/app-debug.apk",
+  "notes": "主题编辑器、内置你的主题、JS 语法校验"
 }
