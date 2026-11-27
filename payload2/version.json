@@ -1,5 +1,5 @@
 {
-  "version": "1.2.0-p50",
-  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v1.2.0-p50/app-debug.apk",
-  "notes": "Waline 评论管理"
+  "version": "1.2.1-p51",
+  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v1.2.1-p51/app-debug.apk",
+  "notes": "修复选图作用域，文章/Waline/图片"
 }
