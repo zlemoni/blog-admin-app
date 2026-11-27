@@ -86,6 +86,9 @@
   pre.log.open{height:60vh}
   @media (prefers-color-scheme:dark){ pre.log{background:rgba(255,255,255,.05)} }
 
+  .postrow{display:flex;gap:8px;align-items:stretch;margin-bottom:6px}
+  .postrow button{min-width:auto}
+  .postrow button.open{flex:1;text-align:left;font-weight:500;font-size:14px}
   .filelist{max-height:46vh;overflow:auto;margin-top:10px}
   .filelist button{display:block;width:100%;text-align:left;margin-bottom:6px;
     font-weight:500;font-size:14px;padding:11px 14px}
@@ -674,11 +677,29 @@
       const badSet = new Set(bad.map(b => b.path))
       if (!list.length) { box.innerHTML = '<div class="status">还没有文章</div>'; return }
       box.innerHTML = list.map(p =>
-        '<button class="ghost" data-path="' + p.path + '">' + (p.title || p.path) +
-        '<div style="color:var(--muted);font-weight:400;font-size:12px">' + (p.date || '') +
-        (badSet.has(p.path) ? ' · <span style="color:var(--danger)">frontmatter 需修正</span>' : '') +
-        '</div></button>').join('')
-      box.querySelectorAll('button').forEach(b => { b.onclick = () => openEditor(b.dataset.path) })
+        '<div class="postrow">' +
+          '<button class="ghost open" data-path="' + p.path + '">' + (p.title || p.path) +
+          '<div style="color:var(--muted);font-weight:400;font-size:12px">' + (p.date || '') +
+          (badSet.has(p.path) ? ' · <span style="color:var(--danger)">frontmatter 需修正</span>' : '') +
+          '</div></button>' +
+          '<button class="ghost danger" data-del="' + p.path + '" style="flex:0 0 auto;padding:0 14px;font-size:13px">删</button>' +
+        '</div>').join('')
+      box.querySelectorAll('button.open').forEach(b => { b.onclick = () => openEditor(b.dataset.path) })
+      box.querySelectorAll('button[data-del]').forEach(b => {
+        let armed = false, timer = null
+        b.onclick = () => {
+          if (!armed) {
+            armed = true
+            b.textContent = '确认?'
+            timer = setTimeout(() => { armed = false; b.textContent = '删' }, 4000)
+            return
+          }
+          clearTimeout(timer)
+          const r = Native.deletePost(b.dataset.del)
+          if (r === 'ok') { toast('✓ 已删除'); loadPosts() }
+          else toast(r)
+        }
+      })
     } catch (e) { window.__log('读取文章失败: ' + e) }
   }
   $('btn-posts').onclick = loadPosts
