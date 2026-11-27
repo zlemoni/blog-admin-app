@@ -92,9 +92,16 @@ class MainActivity : AppCompatActivity() {
             var text = cfg.readText()
             var changed = false
 
+            // Astro 6 里 passthrough 已改名为 noop
             if (text.contains("astro/assets/services/sharp")) {
-                text = text.replace("astro/assets/services/sharp", "astro/assets/services/passthrough")
-                log("图片服务已切换为 passthrough（手机无 sharp）")
+                text = text.replace("astro/assets/services/sharp", "astro/assets/services/noop")
+                log("图片服务已切换为 noop（手机无 sharp）")
+                changed = true
+            }
+            // 兼容上一版误写的 passthrough
+            if (text.contains("astro/assets/services/passthrough")) {
+                text = text.replace("astro/assets/services/passthrough", "astro/assets/services/noop")
+                log("修正图片服务名 passthrough → noop")
                 changed = true
             }
 
@@ -694,9 +701,13 @@ class MainActivity : AppCompatActivity() {
                     "/usr/local/node/bin/node",
                     "node_modules/astro/bin/astro.mjs", "build"))
                 val secs = (System.currentTimeMillis() - t0) / 1000
-                if (code == 0) {
-                    log("产物: ${distSummary(File(dir, "project/dist"))}")
+                val dist = File(dir, "project/dist")
+                val pageCount = if (dist.exists()) dist.walkTopDown().count { it.isFile && it.name.endsWith(".html") } else 0
+                if (code == 0 && pageCount > 0) {
+                    log("产物: ${distSummary(dist)}")
                     stage("✓ 构建成功（${secs}s）")
+                } else if (code == 0) {
+                    stage("✗ 构建失败（未见产物，看上面日志）")
                 } else {
                     stage("✗ 构建失败（exit $code）")
                 }
