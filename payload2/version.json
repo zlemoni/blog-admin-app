@@ -1,5 +1,5 @@
 {
-  "version": "0.9.4-p45",
-  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.9.4-p45/app-debug.apk",
-  "notes": "修复 JS 语法错误导致的启动卡死"
+  "version": "0.9.5-p46",
+  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.9.5-p46/app-debug.apk",
+  "notes": "支持 API 新建 Vercel 项目"
 }
