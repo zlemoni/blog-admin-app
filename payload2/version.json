@@ -1,5 +1,5 @@
 {
-  "version": "0.7.0-p36",
-  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.7.0-p36/app-debug.apk",
-  "notes": "本地预览服务"
+  "version": "0.7.1-p37",
+  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.7.1-p37/app-debug.apk",
+  "notes": "修复 noop 服务、毛玻璃界面、本地预览"
 }
