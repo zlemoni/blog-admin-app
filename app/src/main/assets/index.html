@@ -163,6 +163,7 @@
     </div>
     <div class="row" style="margin-bottom:10px">
       <button class="ghost small" id="btn-projects" style="flex:1">获取项目列表</button>
+      <button class="ghost small" id="btn-create" style="flex:1">新建项目</button>
     </div>
     <div id="proj-list" style="display:none;margin-bottom:10px"></div>
     <div class="row" style="margin-bottom:10px">
@@ -382,6 +383,23 @@
       Native.listProjects()
     } catch (e) { window.__log('调用失败: ' + e) }
     setTimeout(() => { b.disabled = false }, 1500)
+  }
+
+  document.getElementById('btn-create').onclick = () => {
+    const name = document.getElementById('vc-project').value.trim()
+    if (!name) { window.__stage('先在项目名输入框填一个名字'); return }
+    try {
+      Native.saveConfig('vercelToken', document.getElementById('vc-token').value.trim())
+      Native.saveConfig('proxyHost', document.getElementById('px-host').value.trim())
+      Native.saveConfig('proxyPort', document.getElementById('px-port').value.trim())
+      window.__stage('创建项目 ' + name + ' …')
+      Native.createProject(name)
+    } catch (e) { window.__log('调用失败: ' + e) }
+  }
+
+  window.__projectCreated = (name) => {
+    document.getElementById('vc-project').value = name
+    document.getElementById('btn-deploy').disabled = false
   }
 
   document.getElementById('btn-save').onclick = () => {
