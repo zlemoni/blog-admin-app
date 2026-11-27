@@ -60,6 +60,11 @@ class MainActivity : AppCompatActivity() {
             webChromeClient = android.webkit.WebChromeClient()
             loadUrl("file:///android_asset/index.html")
         }
+        imagePicker = registerForActivityResult(
+            androidx.activity.result.contract.ActivityResultContracts.GetContent()
+        ) { uri ->
+            if (uri != null) io.execute { processPickedImage(uri) }
+        }
         setContentView(web)
         // 首次解压耗时较长，避免息屏导致进程被回收
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -85,6 +90,10 @@ class MainActivity : AppCompatActivity() {
     // Vercel 接口基址：api.vercel.com 在国内被阻断，主站同名路径可达
     private val vercelApi = "https://vercel.com/api"
 
+    // 选图：Activity Result API，回调在 Activity 层，Bridge 里只负责触发
+    private var pendingQuality = 80
+    private lateinit var imagePicker: androidx.activity.result.ActivityResultLauncher<String>
+
     // 载荷版本：换 Node/依赖时必须改这里，旧环境会被自动清掉重装
     private val payloadVer = "p2-node2214"
     private val markerFile: File get() = File(filesDir, ".payload-ver")
@@ -94,6 +103,57 @@ class MainActivity : AppCompatActivity() {
         markerFile.exists() &&
             markerFile.readText().trim() == payloadVer &&
             File(payloadDir(), "rootfs/usr/local/node/bin/node").canExecute()
+
+
+    /** 把选中的图片压成 WebP 存到 public/images */
+    private fun processPickedImage(uri: android.net.Uri) {
+        try {
+            stage("处理图片…")
+            val resolver = contentResolver
+            val opts = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            resolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it, null, opts) }
+
+            var scale = 1
+            val maxEdge = maxOf(opts.outWidth, opts.outHeight)
+            while (maxEdge / scale > 1600) scale *= 2
+
+            val decodeOpts = android.graphics.BitmapFactory.Options().apply { inSampleSize = scale }
+            var bmp = resolver.openInputStream(uri)?.use {
+                android.graphics.BitmapFactory.decodeStream(it, null, decodeOpts)
+            } ?: throw IllegalStateException("无法读取图片")
+
+            try {
+                resolver.openInputStream(uri)?.use { input ->
+                    val exif = androidx.exifinterface.media.ExifInterface(input)
+                    val deg = when (exif.getAttributeInt(
+                        androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION, 1)) {
+                        androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                        androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                        androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                        else -> 0f
+                    }
+                    if (deg != 0f) {
+                        val m = android.graphics.Matrix().apply { postRotate(deg) }
+                        bmp = android.graphics.Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true)
+                    }
+                }
+            } catch (_: Throwable) {}
+
+            val dir = File(payloadDir(), "project/public/images").apply { mkdirs() }
+            val name = "img-" + System.currentTimeMillis() + ".webp"
+            val outFile = File(dir, name)
+            outFile.outputStream().use { os ->
+                bmp.compress(android.graphics.Bitmap.CompressFormat.WEBP_LOSSY, pendingQuality, os)
+            }
+            val kb = outFile.length() / 1024
+            log("已保存 /images/$name（${kb}KB，质量 $pendingQuality）")
+            stage("✓ 图片已保存（${kb}KB）")
+            js("window.__imageReady && window.__imageReady('/images/$name')")
+        } catch (e: Throwable) {
+            log("图片处理失败: ${e.message}")
+            stage("✗ 图片处理失败: ${e.message}")
+        }
+    }
 
     /** 构建前修补配置：sharp → passthrough；关闭远程字体（大陆拉不到，会卡 2 分钟） */
     private fun patchImageService(dir: File) {
@@ -783,6 +843,15 @@ class MainActivity : AppCompatActivity() {
             return text
         }
 
+        @JavascriptInterface
+        fun pickImage(quality: Int) {
+            pendingQuality = quality.coerceIn(30, 100)
+            ui.post {
+                try { imagePicker.launch("image/*") }
+                catch (e: Throwable) { log("打开相册失败: ${e.message}") }
+            }
+        }
+
         // ---------- 文章 ----------
 
         private fun blogDir(): File = File(payloadDir(), "project/src/content/blog")
@@ -856,80 +925,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // ---------- 图片 → WebP ----------
 
-        private var pendingQuality = 80
-        private val pickImageReq = 1001
-
-        /** 调系统选图，压缩成 WebP 存到 public/images */
-        @JavascriptInterface
-        fun pickImage(quality: Int) {
-            pendingQuality = quality.coerceIn(30, 100)
-            ui.post {
-                try {
-                    val intent = android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT).apply {
-                        addCategory(android.content.Intent.CATEGORY_OPENABLE)
-                        type = "image/*"
-                    }
-                    startActivityForResult(intent, pickImageReq)
-                } catch (e: Throwable) {
-                    log("打开相册失败: ${e.message}")
-                }
-            }
-        }
-
-        override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
-            super.onActivityResult(requestCode, resultCode, data)
-            if (requestCode != pickImageReq || resultCode != android.app.Activity.RESULT_OK) return
-            val uri = data?.data ?: return
-            io.execute {
-                try {
-                    stage("处理图片…")
-                    val resolver = contentResolver
-                    val opts = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                    resolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it, null, opts) }
-                    var scale = 1
-                    val maxEdge = maxOf(opts.outWidth, opts.outHeight)
-                    while (maxEdge / scale > 1600) scale *= 2
-
-                    val decodeOpts = android.graphics.BitmapFactory.Options().apply { inSampleSize = scale }
-                    var bmp = resolver.openInputStream(uri)?.use {
-                        android.graphics.BitmapFactory.decodeStream(it, null, decodeOpts)
-                    } ?: throw IllegalStateException("无法读取图片")
-
-                    // EXIF 方向
-                    try {
-                        resolver.openInputStream(uri)?.use { input ->
-                            val exif = androidx.exifinterface.media.ExifInterface(input)
-                            val deg = when (exif.getAttributeInt(androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION, 1)) {
-                                androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_90 -> 90f
-                                androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_180 -> 180f
-                                androidx.exifinterface.media.ExifInterface.ORIENTATION_ROTATE_270 -> 270f
-                                else -> 0f
-                            }
-                            if (deg != 0f) {
-                                val m = android.graphics.Matrix().apply { postRotate(deg) }
-                                bmp = android.graphics.Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true)
-                            }
-                        }
-                    } catch (_: Throwable) {}
-
-                    val dir = File(payloadDir(), "project/public/images").apply { mkdirs() }
-                    val name = "img-" + System.currentTimeMillis() + ".webp"
-                    val outFile = File(dir, name)
-                    outFile.outputStream().use { os ->
-                        bmp.compress(android.graphics.Bitmap.CompressFormat.WEBP_LOSSY, pendingQuality, os)
-                    }
-                    val kb = outFile.length() / 1024
-                    log("已保存 /images/$name（${kb}KB，质量 $pendingQuality）")
-                    stage("✓ 图片已插入（${kb}KB）")
-                    js("window.__imageReady && window.__imageReady('/images/$name')")
-                } catch (e: Throwable) {
-                    log("图片处理失败: ${e.message}")
-                    stage("✗ 图片处理失败: ${e.message}")
-                }
-            }
-        }
 
         // ---------- 主题文件读写 ----------
 
