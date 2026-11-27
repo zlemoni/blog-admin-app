@@ -1,5 +1,5 @@
 {
-  "version": "0.9.1-p42",
-  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.9.1-p42/app-debug.apk",
-  "notes": "GitHub 推送部署（绕过 Vercel API）"
+  "version": "0.9.2-p43",
+  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.9.2-p43/app-debug.apk",
+  "notes": "Vercel 接口改走 vercel.com/api"
 }
