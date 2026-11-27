@@ -77,6 +77,9 @@ class MainActivity : AppCompatActivity() {
     private fun stage(msg: String) = js("window.__stage && window.__stage('$msg')")
 
     private fun payloadDir(): File = File(filesDir, "payload")
+    // Vercel 接口基址：api.vercel.com 在国内被阻断，主站同名路径可达
+    private val vercelApi = "https://vercel.com/api"
+
     // 载荷版本：换 Node/依赖时必须改这里，旧环境会被自动清掉重装
     private val payloadVer = "p2-node2214"
     private val markerFile: File get() = File(filesDir, ".payload-ver")
@@ -729,7 +732,7 @@ class MainActivity : AppCompatActivity() {
                     val token = prefs().getString("vercelToken", "") ?: ""
                     if (token.isEmpty()) { stage("请先填写 Vercel Token"); return@execute }
                     stage("获取项目列表…")
-                    val json = httpJson("https://api.vercel.com/v9/projects?limit=100", "GET", token, null)
+                    val json = httpJson(vercelApi + "/v9/projects?limit=100", "GET", token, null)
                     val arr = JSONObject(json).optJSONArray("projects")
                     val out = org.json.JSONArray()
                     if (arr != null) for (i in 0 until arr.length()) {
@@ -791,7 +794,7 @@ class MainActivity : AppCompatActivity() {
                             }
                         })
                     }
-                    val resp = httpJson("https://api.vercel.com/v13/deployments?forceNew=1", "POST",
+                    val resp = httpJson(vercelApi + "/v13/deployments?forceNew=1", "POST",
                         token, payload.toString())
                     val dep = JSONObject(resp)
                     val id = dep.optString("id")
@@ -804,7 +807,7 @@ class MainActivity : AppCompatActivity() {
                     while (tries < 60) {
                         Thread.sleep(3000)
                         tries++
-                        val cur = JSONObject(httpJson("https://api.vercel.com/v13/deployments/$id", "GET", token, null))
+                        val cur = JSONObject(httpJson(vercelApi + "/v13/deployments/$id", "GET", token, null))
                         state = cur.optString("readyState")
                         stage("部署中: $state")
                         if (state == "READY" || state == "ERROR" || state == "CANCELED") break
@@ -832,7 +835,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         private fun uploadVercelFile(token: String, sha: String, f: File) {
-            val conn = open("https://api.vercel.com/v2/files")
+            val conn = open(vercelApi + "/v2/files")
             conn.requestMethod = "POST"
             conn.doOutput = true
             conn.connectTimeout = 20000
