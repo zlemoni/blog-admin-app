@@ -3,160 +3,265 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>心记管理 · P0</title>
+<meta name="color-scheme" content="light dark">
+<title>心记管理</title>
 <style>
-  :root{--bg:#f6f7f9;--card:#fff;--line:#e5e7eb;--text:#1f2328;--muted:#6b7280;--accent:#2563eb}
-  @media (prefers-color-scheme:dark){:root{--bg:#0b0b10;--card:#16161c;--line:#2a2a33;--text:#f4f4f5;--muted:#9ca3af}}
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
-  .wrap{max-width:720px;margin:0 auto;padding:18px 14px 40px}
-  h1{font-size:18px;margin:4px 0 2px}
-  .sub{color:var(--muted);font-size:13px;margin:0 0 16px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
-  .row{display:flex;gap:8px;flex-wrap:wrap}
-  button{flex:1;min-width:140px;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);font:inherit;font-weight:600}
-  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-  button:disabled{opacity:.5}
-  .stage{font-size:13px;color:var(--muted);margin:10px 0 0}
-  #splash{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;
-    align-items:center;justify-content:center;gap:14px;z-index:99;padding:24px;text-align:center}
-  .spinner{width:44px;height:44px;border:3px solid var(--line);border-top-color:var(--accent);
-    border-radius:50%;animation:spin 1s linear infinite}
+  :root{
+    --bg:#f5f5f7;
+    --bg2:#e8ecf5;
+    --glass:rgba(255,255,255,.62);
+    --glass-strong:rgba(255,255,255,.78);
+    --stroke:rgba(255,255,255,.85);
+    --text:#1d1d1f;
+    --muted:#6e6e73;
+    --accent:#0071e3;
+    --accent-soft:rgba(0,113,227,.12);
+    --danger:#ff3b30;
+    --good:#34c759;
+    --shadow:0 12px 40px rgba(0,0,0,.10);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#000;
+      --bg2:#0d1220;
+      --glass:rgba(28,28,30,.62);
+      --glass-strong:rgba(38,38,42,.78);
+      --stroke:rgba(255,255,255,.12);
+      --text:#f5f5f7;
+      --muted:#98989d;
+      --accent:#0a84ff;
+      --accent-soft:rgba(10,132,255,.18);
+      --shadow:0 12px 40px rgba(0,0,0,.55);
+    }
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    margin:0;color:var(--text);
+    font:16px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Helvetica Neue",sans-serif;
+    background:
+      radial-gradient(1200px 600px at 10% -10%, rgba(0,113,227,.18), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(255,45,85,.14), transparent 55%),
+      radial-gradient(900px 600px at 50% 110%, rgba(52,199,89,.14), transparent 60%),
+      linear-gradient(180deg,var(--bg),var(--bg2));
+    background-attachment:fixed;
+    min-height:100%;
+  }
+  .wrap{max-width:680px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 18px) 16px 32px}
+
+  h1{font-size:32px;line-height:1.15;letter-spacing:-.02em;font-weight:700;margin:6px 0 2px}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 18px}
+
+  .card{
+    background:var(--glass);
+    -webkit-backdrop-filter:blur(30px) saturate(180%);
+    backdrop-filter:blur(30px) saturate(180%);
+    border:1px solid var(--stroke);
+    border-radius:22px;
+    padding:16px;
+    margin-bottom:14px;
+    box-shadow:var(--shadow);
+  }
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+  button{
+    font:inherit;font-weight:600;font-size:15px;
+    padding:12px 18px;border-radius:999px;border:1px solid transparent;
+    background:var(--glass-strong);color:var(--text);
+    -webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
+    transition:transform .16s ease,opacity .16s ease;
+    flex:1;min-width:120px;
+  }
+  button:active{transform:scale(.97);opacity:.85}
+  button:disabled{opacity:.45;transform:none}
+  button.primary{background:var(--accent);color:#fff;box-shadow:0 6px 20px rgba(0,113,227,.35)}
+  button.ghost{background:transparent;border-color:var(--stroke);color:var(--text)}
+  button.danger{color:var(--danger)}
+  button.small{flex:0 0 auto;min-width:auto;padding:9px 14px;font-size:14px}
+
+  .verbar{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .ver{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+  .status{display:flex;align-items:center;gap:9px;font-size:14px;color:var(--muted);margin-top:12px}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:0 0 auto}
+  .dot.good{background:var(--good);box-shadow:0 0 0 4px rgba(52,199,89,.18)}
+  .dot.bad{background:var(--danger);box-shadow:0 0 0 4px rgba(255,59,48,.16)}
+  .dot.run{background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+
+  pre{
+    margin:14px 0 0;padding:14px;border-radius:16px;
+    background:rgba(0,0,0,.04);border:1px solid var(--stroke);
+    height:44vh;overflow:auto;white-space:pre-wrap;word-break:break-word;
+    font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--text);
+  }
+  @media (prefers-color-scheme:dark){ pre{background:rgba(255,255,255,.05)} }
+
+  .upd{margin-top:10px;font-size:14px;display:none}
+  .upd.show{display:block}
+  .upd .ver-line{color:var(--muted);margin-bottom:8px}
+
+  /* 启动遮罩 */
+  #splash{
+    position:fixed;inset:0;z-index:99;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:16px;padding:28px;text-align:center;
+    background:
+      radial-gradient(800px 400px at 50% 0%, rgba(0,113,227,.22), transparent 60%),
+      linear-gradient(180deg,var(--bg),var(--bg2));
+  }
+  .ring{width:46px;height:46px;border-radius:50%;
+    border:3px solid rgba(127,127,127,.22);border-top-color:var(--accent);
+    animation:spin .9s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
-  .splash-title{font-size:16px;font-weight:600}
-  .splash-stage{font-size:13px;color:var(--muted);max-width:80%}
-  pre{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;height:46vh;overflow:auto;font:12px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;margin:10px 0 0}
+  .splash-title{font-size:19px;font-weight:600;letter-spacing:-.01em}
+  .splash-stage{font-size:14px;color:var(--muted);max-width:78%}
+  .splash-hint{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 24px);font-size:12px;color:var(--muted)}
 </style>
 </head>
 <body>
+
 <div id="splash">
-  <div class="spinner"></div>
+  <div class="ring"></div>
   <div class="splash-title">正在准备运行环境</div>
   <div class="splash-stage" id="splash-stage">首次启动需要解压约 500 MB，请勿退出</div>
+  <div class="splash-hint">心记管理</div>
 </div>
+
 <div class="wrap" id="main" style="display:none">
   <h1>心记管理</h1>
-  <p class="sub">这一步验证：解压运行环境 → 本地跑 Astro 构建。</p>
+  <p class="sub">本地构建 · 本地预览 · 发布到 Vercel</p>
 
   <div class="card">
-    <div class="row" style="align-items:center">
-      <span style="font-size:13px;color:var(--muted)" id="ver-text">版本 …</span>
-      <button id="btn-update" style="flex:0 0 auto;min-width:auto;padding:8px 12px">检查更新</button>
+    <div class="verbar">
+      <span class="ver" id="ver-text">版本 …</span>
+      <button class="small ghost" id="btn-update" style="flex:0 0 auto">检查更新</button>
     </div>
-    <div id="update-box" style="display:none;margin-top:8px;font-size:13px"></div>
+    <div class="upd" id="update-box"></div>
   </div>
 
   <div class="card">
     <div class="row">
-      <button id="btn-install">安装环境</button>
-      <button id="btn-clear">清除环境</button>
-      <button id="btn-diag">自检</button>
       <button id="btn-build" class="primary">构建</button>
       <button id="btn-preview">预览</button>
     </div>
-    <p class="stage" id="stage">状态：<span id="state">未知</span></p>
+    <div class="status"><span class="dot" id="dot"></span><span id="state">未知</span></div>
     <pre id="log"></pre>
   </div>
+
+  <div class="card">
+    <div class="row">
+      <button class="ghost small" id="btn-diag" style="flex:1">自检</button>
+      <button class="ghost small" id="btn-install" style="flex:1">安装环境</button>
+      <button class="ghost small danger" id="btn-clear" style="flex:1">清除环境</button>
+    </div>
+  </div>
 </div>
+
 <script>
   const logEl = document.getElementById('log')
   const stateEl = document.getElementById('state')
-  const btnInstall = document.getElementById('btn-install')
+  const dotEl = document.getElementById('dot')
+  const splashStage = document.getElementById('splash-stage')
   const btnBuild = document.getElementById('btn-build')
+  const btnPreview = document.getElementById('btn-preview')
+  const btnDiag = document.getElementById('btn-diag')
+  const btnInstall = document.getElementById('btn-install')
+  const btnClear = document.getElementById('btn-clear')
 
   window.__log = (line) => {
     logEl.textContent += line + '\n'
     logEl.scrollTop = logEl.scrollHeight
   }
-  window.__stage = (msg) => { stateEl.textContent = msg }
-  window.__update = (jsonStr) => {
-    try {
-      const d = JSON.parse(jsonStr)
-      const box = document.getElementById('update-box')
-      box.style.display = 'block'
-      document.getElementById('ver-text').textContent = '当前 ' + d.current
-      if (d.hasUpdate) {
-        box.innerHTML = '<div style="margin-bottom:6px">发现新版本 <b>' + d.latest + '</b></div>'
-          + '<button id="btn-dl-mirror" style="min-width:auto;padding:8px 12px">应用内下载（镜像）</button> '
-          + '<button id="btn-dl-direct" style="min-width:auto;padding:8px 12px">应用内下载（直链）</button>'
-        const doDownload = (url, btn) => {
-          btn.disabled = true
-          btn.textContent = '下载中…'
-          logEl.textContent = ''
-          try { Native.downloadUpdate(url) } catch (e) { window.__log('调用失败: ' + e) }
-        }
-        document.getElementById('btn-dl-mirror').onclick = (e) => doDownload(d.mirror, e.target)
-        document.getElementById('btn-dl-direct').onclick = (e) => doDownload(d.direct, e.target)
-      } else {
-        box.textContent = '已是最新版本'
-      }
-    } catch (e) { box.textContent = '解析失败: ' + e }
+
+  function setTone(t) {
+    dotEl.className = 'dot' + (t ? ' ' + t : '')
   }
-  window.__updateErr = (msg) => {
-    const box = document.getElementById('update-box')
-    box.style.display = 'block'
-    box.textContent = '检查失败: ' + msg
+
+  window.__stage = (msg) => {
+    stateEl.textContent = msg
+    if (splashStage) splashStage.textContent = msg
+    if (msg.startsWith('✓') || msg.indexOf('就绪') >= 0) setTone('good')
+    else if (msg.startsWith('✗')) setTone('bad')
+    else setTone('run')
   }
 
   window.__buildDone = (code) => {
     btnBuild.disabled = false
+    btnPreview.disabled = false
+    btnDiag.disabled = false
     btnInstall.disabled = false
-    window.__log('--- exit ' + code + ' ---')
   }
 
-  try { stateEl.textContent = Native.status() } catch (e) { stateEl.textContent = '桥接失败' }
-
-  btnInstall.onclick = () => {
-    btnInstall.disabled = true
-    try { Native.install() } catch (e) { window.__log('调用失败: ' + e) }
+  // 更新
+  window.__update = (jsonStr) => {
+    try {
+      const d = JSON.parse(jsonStr)
+      const box = document.getElementById('update-box')
+      document.getElementById('ver-text').textContent = '当前 ' + d.current
+      box.classList.add('show')
+      if (d.hasUpdate) {
+        box.innerHTML = '<div class="ver-line">发现新版本 <b>' + d.latest + '</b></div>'
+          + '<div class="row"><button class="small primary" id="dl1">应用内下载（镜像）</button>'
+          + '<button class="small ghost" id="dl2">直链下载</button></div>'
+        const go = (url, btn) => {
+          btn.disabled = true; btn.textContent = '下载中…'
+          logEl.textContent = ''
+          try { Native.downloadUpdate(url) } catch (e) { window.__log('调用失败: ' + e) }
+        }
+        document.getElementById('dl1').onclick = (e) => go(d.mirror, e.target)
+        document.getElementById('dl2').onclick = (e) => go(d.direct, e.target)
+      } else {
+        box.innerHTML = '<div class="ver-line">已是最新版本</div>'
+      }
+    } catch (e) {
+      document.getElementById('update-box').textContent = '解析失败: ' + e
+    }
   }
+  window.__updateErr = (msg) => {
+    const box = document.getElementById('update-box')
+    box.classList.add('show')
+    box.textContent = '检查失败: ' + msg
+  }
+
+  // 启动
+  window.__envReady = () => {
+    document.getElementById('splash').style.display = 'none'
+    document.getElementById('main').style.display = 'block'
+    setTone('good')
+    stateEl.textContent = '环境就绪'
+  }
+  window.__envError = (msg) => {
+    document.getElementById('splash-stage').textContent = '安装失败：' + msg
+    const b = document.createElement('button')
+    b.textContent = '重试'
+    b.className = 'primary'
+    b.style.marginTop = '14px'
+    b.onclick = () => location.reload()
+    document.getElementById('splash').appendChild(b)
+  }
+
   document.getElementById('btn-update').onclick = () => {
     const b = document.getElementById('btn-update')
     b.disabled = true
     try { Native.checkUpdate() } catch (e) { window.__updateErr('调用失败') }
-    setTimeout(() => { b.disabled = false }, 1000)
-  }
-  try { document.getElementById('ver-text').textContent = '当前 ' + Native.version() } catch (e) {}
-
-  // 启动：先装环境，成功后进主界面
-  window.__envReady = () => {
-    document.getElementById('splash').style.display = 'none'
-    document.getElementById('main').style.display = 'block'
-    stateEl.textContent = '环境就绪'
-  }
-  window.__envError = (msg) => {
-    document.getElementById('splash-stage').textContent = '安装失败：' + msg + '（可点重试）'
-    const b = document.createElement('button')
-    b.textContent = '重试'
-    b.style.cssText = 'margin-top:12px;padding:10px 18px;border-radius:10px;border:1px solid var(--line);background:var(--accent);color:#fff'
-    b.onclick = () => location.reload()
-    document.getElementById('splash').appendChild(b)
-  }
-  const splashStage = document.getElementById('splash-stage')
-  window.__stage = (msg) => {
-    stateEl.textContent = msg
-    if (splashStage) splashStage.textContent = msg
-  }
-  try { Native.ensureEnv() } catch (e) {
-    document.getElementById('splash-stage').textContent = '调用失败: ' + e
+    setTimeout(() => { b.disabled = false }, 1200)
   }
 
-  const btnDiag = document.getElementById('btn-diag')
-  // 两步确认，不依赖系统弹窗
-  let clearArmed = false
-  let clearTimer = null
-  const btnClear = document.getElementById('btn-clear')
+  btnInstall.onclick = () => {
+    btnInstall.disabled = true
+    logEl.textContent = ''
+    try { Native.install() } catch (e) { window.__log('调用失败: ' + e) }
+  }
+
+  let clearArmed = false, clearTimer = null
   btnClear.onclick = () => {
     if (!clearArmed) {
       clearArmed = true
       btnClear.textContent = '再点一次确认'
-      btnClear.style.borderColor = '#dc2626'
-      btnClear.style.color = '#dc2626'
+      btnClear.style.color = 'var(--danger)'
       clearTimeout(clearTimer)
       clearTimer = setTimeout(() => {
         clearArmed = false
         btnClear.textContent = '清除环境'
-        btnClear.style.borderColor = ''
         btnClear.style.color = ''
       }, 5000)
       return
@@ -164,7 +269,6 @@
     clearArmed = false
     clearTimeout(clearTimer)
     btnClear.textContent = '清除环境'
-    btnClear.style.borderColor = ''
     btnClear.style.color = ''
     logEl.textContent = ''
     window.__log('开始清除环境…')
@@ -175,20 +279,29 @@
     btnDiag.disabled = true
     logEl.textContent = ''
     try { Native.diagnose() } catch (e) { window.__log('调用失败: ' + e) }
-    setTimeout(() => { btnDiag.disabled = false }, 500)
+    setTimeout(() => { btnDiag.disabled = false }, 800)
   }
-  document.getElementById('btn-preview').onclick = () => {
+
+  btnPreview.onclick = () => {
+    btnPreview.disabled = true
     try {
       Native.preview()
       const url = Native.previewUrl()
-      setTimeout(() => { window.location.href = url }, 600)
-    } catch (e) { window.__log('预览失败: ' + e) }
+      setTimeout(() => { window.location.href = url }, 700)
+    } catch (e) { window.__log('预览失败: ' + e); btnPreview.disabled = false }
   }
 
   btnBuild.onclick = () => {
     btnBuild.disabled = true
+    btnPreview.disabled = true
     logEl.textContent = ''
-    try { Native.build() } catch (e) { window.__log('调用失败: ' + e) }
+    window.__stage('开始构建…')
+    try { Native.build() } catch (e) { window.__log('调用失败: ' + e); btnBuild.disabled = false }
+  }
+
+  try { document.getElementById('ver-text').textContent = '版本 ' + Native.version() } catch (e) {}
+  try { Native.ensureEnv() } catch (e) {
+    document.getElementById('splash-stage').textContent = '调用失败: ' + e
   }
 </script>
 </body>
