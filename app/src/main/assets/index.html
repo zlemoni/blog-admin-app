@@ -94,6 +94,16 @@
     -webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
   }
   input::placeholder{color:var(--muted)}
+  .filelist{max-height:38vh;overflow:auto;margin-top:10px;border-radius:14px}
+  .filelist button{display:block;width:100%;text-align:left;margin-bottom:6px;
+    font-weight:500;font-size:14px;padding:11px 14px}
+  #editor{position:fixed;inset:0;z-index:80;display:none;flex-direction:column;
+    background:var(--bg);padding:calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 12px)}
+  #editor .head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  #editor .head .path{flex:1;font-size:13px;color:var(--muted);word-break:break-all}
+  #editor textarea{flex:1;width:100%;border-radius:16px;border:1px solid var(--stroke);
+    background:var(--glass-strong);color:var(--text);padding:12px;font:12px/1.6 ui-monospace,Menlo,monospace;
+    resize:none;outline:none}
   pre{
     margin:14px 0 0;padding:14px;border-radius:16px;
     background:rgba(0,0,0,.04);border:1px solid var(--stroke);
@@ -155,6 +165,23 @@
     </div>
     <div class="status"><span class="dot" id="dot"></span><span id="state">未知</span></div>
     <pre id="log"></pre>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <button class="ghost" id="btn-theme">主题文件</button>
+    </div>
+    <div class="filelist" id="theme-files" style="display:none"></div>
+    <div class="status"><span class="dot"></span><span id="theme-hint">修改后需重新构建才会生效</span></div>
+  </div>
+
+  <div id="editor">
+    <div class="head">
+      <button class="small ghost" id="ed-close" style="flex:0 0 auto">关闭</button>
+      <span class="path" id="ed-path"></span>
+      <button class="small primary" id="ed-save" style="flex:0 0 auto">保存</button>
+    </div>
+    <textarea id="ed-text" spellcheck="false"></textarea>
   </div>
 
   <div class="card">
@@ -383,6 +410,44 @@
       Native.listProjects()
     } catch (e) { window.__log('调用失败: ' + e) }
     setTimeout(() => { b.disabled = false }, 1500)
+  }
+
+  let editingPath = ''
+  const edBox = document.getElementById('editor')
+  const edText = document.getElementById('ed-text')
+  const edPathEl = document.getElementById('ed-path')
+
+  document.getElementById('btn-theme').onclick = () => {
+    const box = document.getElementById('theme-files')
+    if (box.style.display === 'block') { box.style.display = 'none'; return }
+    try {
+      const list = JSON.parse(Native.listThemeFiles())
+      box.innerHTML = list.map(f =>
+        '<button class="ghost" data-path="' + f.path + '">' +
+        f.path.replace('src/', '') + ' <span style="color:var(--muted);font-weight:400">' +
+        Math.round(f.size / 1024) + 'KB</span></button>').join('')
+      box.querySelectorAll('button').forEach(b => {
+        b.onclick = () => openEditor(b.dataset.path)
+      })
+      box.style.display = 'block'
+    } catch (e) { window.__log('读取文件列表失败: ' + e) }
+  }
+
+  function openEditor(path) {
+    editingPath = path
+    edPathEl.textContent = path
+    edText.value = Native.readThemeFile(path)
+    edBox.style.display = 'flex'
+  }
+
+  document.getElementById('ed-close').onclick = () => {
+    edBox.style.display = 'none'
+  }
+
+  document.getElementById('ed-save').onclick = () => {
+    const r = Native.writeThemeFile(editingPath, edText.value)
+    window.__stage(r === 'ok' ? '✓ 已保存，记得重新构建' : r)
+    if (r === 'ok') edBox.style.display = 'none'
   }
 
   document.getElementById('btn-create').onclick = () => {
