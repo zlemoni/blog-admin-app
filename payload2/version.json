@@ -1,5 +1,5 @@
 {
-  "version": "0.7.1-p37",
-  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.7.1-p37/app-debug.apk",
-  "notes": "修复 noop 服务、毛玻璃界面、本地预览"
+  "version": "0.8.0-p38",
+  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.8.0-p38/app-debug.apk",
+  "notes": "Vercel 直接发布"
 }
