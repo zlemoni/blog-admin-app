@@ -1,5 +1,5 @@
 {
-  "version": "0.9.2-p43",
-  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.9.2-p43/app-debug.apk",
-  "notes": "Vercel 接口改走 vercel.com/api"
+  "version": "0.9.3-p44",
+  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.9.3-p44/app-debug.apk",
+  "notes": "首启动进度条与计时"
 }
