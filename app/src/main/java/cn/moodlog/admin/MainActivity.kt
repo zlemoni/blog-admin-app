@@ -629,6 +629,74 @@ class MainActivity : AppCompatActivity() {
             return o.toString()
         }
 
+        // ---------- 主题文件读写 ----------
+
+        private fun themeRoot(): File = File(payloadDir(), "project")
+
+        /** 只允许访问 src/ 与 astro.config.ts，防越权 */
+        private fun safeThemeFile(rel: String): File? {
+            val clean = rel.replace("\\", "/").trimStart('/')
+            if (clean.contains("..")) return null
+            val allowed = clean == "astro.config.ts" || clean.startsWith("src/")
+            if (!allowed) return null
+            return File(themeRoot(), clean)
+        }
+
+        @JavascriptInterface
+        fun listThemeFiles(): String {
+            val out = org.json.JSONArray()
+            try {
+                val root = themeRoot()
+                val cfg = File(root, "astro.config.ts")
+                if (cfg.exists()) out.put(JSONObject().apply {
+                    put("path", "astro.config.ts"); put("size", cfg.length())
+                })
+                val src = File(root, "src")
+                if (src.exists()) {
+                    src.walkTopDown()
+                        .filter { it.isFile }
+                        .filter { f ->
+                            val n = f.name.lowercase()
+                            n.endsWith(".ts") || n.endsWith(".astro") || n.endsWith(".css") ||
+                                n.endsWith(".md") || n.endsWith(".mdx") || n.endsWith(".json") || n.endsWith(".js")
+                        }
+                        .sortedBy { it.relativeTo(root).invariantSeparatorsPath }
+                        .forEach { f ->
+                            out.put(JSONObject().apply {
+                                put("path", f.relativeTo(root).invariantSeparatorsPath)
+                                put("size", f.length())
+                            })
+                        }
+                }
+            } catch (e: Throwable) {
+                log("列出主题文件失败: ${e.message}")
+            }
+            return out.toString()
+        }
+
+        @JavascriptInterface
+        fun readThemeFile(path: String): String {
+            return try {
+                val f = safeThemeFile(path) ?: return ""
+                if (!f.exists()) "" else f.readText()
+            } catch (e: Throwable) {
+                log("读取失败: ${e.message}"); ""
+            }
+        }
+
+        @JavascriptInterface
+        fun writeThemeFile(path: String, text: String): String {
+            return try {
+                val f = safeThemeFile(path) ?: return "路径不允许"
+                f.parentFile?.mkdirs()
+                f.writeText(text)
+                log("已保存: $path")
+                "ok"
+            } catch (e: Throwable) {
+                "保存失败: ${e.message}"
+            }
+        }
+
         /** 用 token 新建项目（无需去网页） */
         @JavascriptInterface
         fun createProject(name: String) {
