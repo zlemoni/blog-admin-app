@@ -168,9 +168,19 @@
       <input id="px-host" placeholder="代理地址（可选，如 127.0.0.1）" autocapitalize="off">
       <input id="px-port" placeholder="端口" inputmode="numeric">
     </div>
-    <div class="row">
+    <div class="row" style="margin-bottom:10px">
+      <input id="gh-token" type="password" placeholder="GitHub Token（推送用）" autocomplete="off">
+    </div>
+    <div class="row" style="margin-bottom:10px">
+      <input id="gh-repo" placeholder="仓库 owner/repo" autocapitalize="off">
+      <input id="gh-branch" placeholder="分支" autocapitalize="off" style="max-width:110px">
+    </div>
+    <div class="row" style="margin-bottom:10px">
       <button class="ghost" id="btn-save">保存配置</button>
-      <button class="primary" id="btn-deploy">发布到 Vercel</button>
+    </div>
+    <div class="row">
+      <button class="ghost" id="btn-deploy">发布（Vercel API）</button>
+      <button class="primary" id="btn-push">推送到 GitHub</button>
     </div>
   </div>
 
@@ -316,7 +326,10 @@
       document.getElementById('vc-token').value = c.vercelToken || ''
       document.getElementById('vc-project').value = c.vercelProject || ''
       document.getElementById('px-host').value = c.proxyHost || ''
-      document.getElementById('px-port').value = c.proxyPort || ''''
+      document.getElementById('px-port').value = c.proxyPort || ''
+      document.getElementById('gh-token').value = c.ghToken || ''
+      document.getElementById('gh-repo').value = c.ghRepo || ''
+      document.getElementById('gh-branch').value = c.ghBranch || 'main'''
     } catch (e) {}
   }
 
@@ -362,6 +375,20 @@
       window.__log('配置已保存')
       window.__stage('配置已保存')
     } catch (e) { window.__log('保存失败: ' + e) }
+  }
+
+  document.getElementById('btn-push').onclick = () => {
+    const b = document.getElementById('btn-push')
+    b.disabled = true
+    logEl.textContent = ''
+    try {
+      Native.saveConfig('ghToken', document.getElementById('gh-token').value.trim())
+      Native.saveConfig('ghRepo', document.getElementById('gh-repo').value.trim())
+      Native.saveConfig('ghBranch', document.getElementById('gh-branch').value.trim() || 'main')
+      window.__stage('开始推送…')
+      Native.pushToGitHub()
+    } catch (e) { window.__log('调用失败: ' + e) }
+    setTimeout(() => { b.disabled = false }, 3000)
   }
 
   document.getElementById('btn-deploy').onclick = () => {
