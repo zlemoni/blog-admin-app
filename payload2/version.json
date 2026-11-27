@@ -1,5 +1,5 @@
 {
-  "version": "0.8.1-p39",
-  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.8.1-p39/app-debug.apk",
-  "notes": "移除 Font 组件，修复字体报错"
+  "version": "0.8.2-p40",
+  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.8.2-p40/app-debug.apk",
+  "notes": "字体回退到系统栈"
 }
