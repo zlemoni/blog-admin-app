@@ -629,6 +629,160 @@ class MainActivity : AppCompatActivity() {
             return o.toString()
         }
 
+        // ---------- Waline 评论 ----------
+
+        private fun walineBase(): String =
+            (prefs().getString("walineUrl", "https://c.moodlog.cn/waline") ?: "").trimEnd('/')
+
+        private fun walineToken(): String = prefs().getString("walineToken", "") ?: ""
+
+        /** 管理员登录，拿 JWT */
+        @JavascriptInterface
+        fun walineLogin(email: String, password: String) {
+            io.execute {
+                try {
+                    stage("Waline 登录…")
+                    val base = walineBase()
+                    log("→ POST $base/api/token")
+                    val body = JSONObject().apply {
+                        put("email", email.trim())
+                        put("password", password)
+                    }.toString()
+                    val resp = requestJson("$base/api/token", "POST", null, body)
+                    val o = JSONObject(resp)
+                    val token = o.optString("token")
+                    if (token.isEmpty()) throw IllegalStateException("未返回 token")
+                    prefs().edit().putString("walineToken", token)
+                        .putString("walineEmail", email.trim()).apply()
+                    log("登录成功")
+                    stage("✓ Waline 已登录")
+                    js("window.__walineLogin && window.__walineLogin('" + esc(o.optJSONObject("user")?.optString("display_name") ?: email) + "')")
+                } catch (e: Throwable) {
+                    log("登录失败: ${e.message}")
+                    stage("✗ 登录失败: ${e.message}")
+                }
+            }
+        }
+
+        /** 拉评论列表：status = all|waiting|approved|spam */
+        @JavascriptInterface
+        fun walineComments(status: String, page: Int) {
+            io.execute {
+                try {
+                    val base = walineBase()
+                    val token = walineToken()
+                    if (token.isEmpty()) { stage("请先登录 Waline"); return@execute }
+                    stage("加载评论…")
+                    val url = "$base/api/comment?type=list&status=$status&page=$page&pageSize=20&lang=zh-CN"
+                    log("→ GET $url")
+                    val resp = requestJson(url, "GET", token, null)
+                    val o = JSONObject(resp)
+                    val data = o.optJSONArray("data") ?: org.json.JSONArray()
+                    val out = org.json.JSONArray()
+                    for (i in 0 until data.length()) {
+                        val c = data.getJSONObject(i)
+                        out.put(JSONObject().apply {
+                            put("id", c.optInt("objectId"))
+                            put("nick", c.optString("nick"))
+                            put("mail", c.optString("mail"))
+                            put("comment", c.optString("comment"))
+                            put("url", c.optString("url"))
+                            put("status", c.optString("status"))
+                            put("time", c.optLong("time"))
+                            put("pid", c.optInt("pid"))
+                        })
+                    }
+                    log("共 ${out.length()} 条")
+                    js("window.__comments && window.__comments('" + esc(out.toString()) + "')")
+                    stage("共 ${out.length()} 条评论")
+                } catch (e: Throwable) {
+                    log("加载评论失败: ${e.message}")
+                    stage("✗ 加载失败: ${e.message}")
+                }
+            }
+        }
+
+        /** 审核：status = approved|spam|waiting */
+        @JavascriptInterface
+        fun walineSetStatus(id: Int, status: String) {
+            io.execute {
+                try {
+                    val base = walineBase()
+                    log("→ PUT $base/api/comment/$id → $status")
+                    requestJson("$base/api/comment/$id", "PUT", walineToken(),
+                        JSONObject().put("status", status).toString())
+                    stage("✓ 已设为 $status")
+                } catch (e: Throwable) {
+                    log("操作失败: ${e.message}")
+                    stage("✗ 操作失败: ${e.message}")
+                }
+            }
+        }
+
+        @JavascriptInterface
+        fun walineDelete(id: Int) {
+            io.execute {
+                try {
+                    val base = walineBase()
+                    log("→ DELETE $base/api/comment/$id")
+                    requestJson("$base/api/comment/$id", "DELETE", walineToken(), null)
+                    stage("✓ 已删除")
+                } catch (e: Throwable) {
+                    log("删除失败: ${e.message}")
+                    stage("✗ 删除失败: ${e.message}")
+                }
+            }
+        }
+
+        /** 管理员回复 */
+        @JavascriptInterface
+        fun walineReply(id: Int, text: String) {
+            io.execute {
+                try {
+                    val base = walineBase()
+                    val email = prefs().getString("walineEmail", "") ?: ""
+                    val body = JSONObject().apply {
+                        put("comment", text)
+                        put("nick", "博主")
+                        put("mail", email)
+                        put("url", "")
+                        put("ua", "MoodlogApp")
+                        put("pid", 0)
+                        put("rid", id)
+                    }.toString()
+                    log("→ POST $base/api/comment (回复 #$id)")
+                    requestJson("$base/api/comment", "POST", walineToken(), body)
+                    stage("✓ 已回复")
+                } catch (e: Throwable) {
+                    log("回复失败: ${e.message}")
+                    stage("✗ 回复失败: ${e.message}")
+                }
+            }
+        }
+
+        /** 通用 JSON 请求（Waline 用） */
+        private fun requestJson(url: String, method: String, token: String?, body: String?): String {
+            val t0 = System.currentTimeMillis()
+            val conn = open(url)
+            conn.requestMethod = method
+            conn.connectTimeout = 12000
+            conn.readTimeout = 25000
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.setRequestProperty("Accept", "application/json")
+            conn.setRequestProperty("User-Agent", "MoodlogApp")
+            if (!token.isNullOrEmpty()) conn.setRequestProperty("Authorization", "Bearer $token")
+            if (body != null) {
+                conn.doOutput = true
+                conn.outputStream.use { it.write(body.toByteArray()) }
+            }
+            val code = conn.responseCode
+            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+            val text = stream?.bufferedReader()?.use { it.readText() } ?: ""
+            log("← $code ${System.currentTimeMillis() - t0}ms ${text.take(120)}")
+            if (code !in 200..299) throw IllegalStateException("HTTP $code ${text.take(160)}")
+            return text
+        }
+
         // ---------- 文章 ----------
 
         private fun blogDir(): File = File(payloadDir(), "project/src/content/blog")
