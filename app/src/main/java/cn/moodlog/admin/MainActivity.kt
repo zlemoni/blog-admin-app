@@ -61,6 +61,8 @@ class MainActivity : AppCompatActivity() {
             loadUrl("file:///android_asset/index.html")
         }
         setContentView(web)
+        // 首次解压耗时较长，避免息屏导致进程被回收
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
     override fun onBackPressed() {
@@ -77,6 +79,9 @@ class MainActivity : AppCompatActivity() {
     private fun stage(msg: String) = js("window.__stage && window.__stage('$msg')")
 
     private fun payloadDir(): File = File(filesDir, "payload")
+    // 内置 tar 解压后的总字节数（用于进度百分比）
+    private val PAYLOAD_RAW_SIZE = 483_758_080L
+
     // Vercel 接口基址：api.vercel.com 在国内被阻断，主站同名路径可达
     private val vercelApi = "https://vercel.com/api"
 
@@ -543,10 +548,14 @@ class MainActivity : AppCompatActivity() {
                             val stream = if (assetName!!.endsWith(".tar")) raw.buffered(1 shl 16)
                                          else GZIPInputStream(raw.buffered(1 shl 16), 1 shl 16)
                             var lastTick = 0L
+                            var files = 0
                             TarExtractor(stream) { _, _, done, _ ->
-                                if (done - lastTick > 16L * 1024 * 1024) {
+                                files++
+                                if (done - lastTick > 4L * 1024 * 1024 || files % 500 == 0) {
                                     lastTick = done
-                                    stage("正在解压 ${done / 1048576} MB")
+                                    val pct = (done * 100 / PAYLOAD_RAW_SIZE).coerceIn(0L, 100L)
+                                    stage("正在解压 $pct%（${done / 1048576} MB / ${PAYLOAD_RAW_SIZE / 1048576} MB，${files} 个文件）")
+                                    js("window.__progress && window.__progress($pct)")
                                 }
                             }.extractTo(dir)
                         }
