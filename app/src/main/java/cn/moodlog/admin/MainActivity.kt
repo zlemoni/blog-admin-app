@@ -697,6 +697,33 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        /** 网络诊断：逐个探测关键域名，输出状态码与耗时 */
+        @JavascriptInterface
+        fun netDiagnose() {
+            io.execute {
+                val targets = listOf(
+                    "https://vercel.com/" to "Vercel 主站",
+                    vercelApi + "/v2/user" to "Vercel API",
+                    "https://api.github.com/" to "GitHub API",
+                    "https://cdn.jsdelivr.net/" to "jsDelivr"
+                )
+                for ((url, name) in targets) {
+                    val t0 = System.currentTimeMillis()
+                    try {
+                        val conn = open(url)
+                        conn.connectTimeout = 8000
+                        conn.readTimeout = 8000
+                        conn.requestMethod = "GET"
+                        val code = conn.responseCode
+                        log("✓ $name  HTTP $code  ${System.currentTimeMillis() - t0}ms")
+                    } catch (e: Throwable) {
+                        log("✗ $name  失败 ${System.currentTimeMillis() - t0}ms: ${e.message}")
+                    }
+                }
+                stage("诊断完成，见日志")
+            }
+        }
+
         /** 用 token 新建项目（无需去网页） */
         @JavascriptInterface
         fun createProject(name: String) {
@@ -844,7 +871,10 @@ class MainActivity : AppCompatActivity() {
                     val token = prefs().getString("vercelToken", "") ?: ""
                     if (token.isEmpty()) { stage("请先填写 Vercel Token"); return@execute }
                     stage("获取项目列表…")
+                    log("token 长度: ${token.length}，代理: ${prefs().getString("proxyHost","")}:${prefs().getString("proxyPort","")}")
+                    val t0 = System.currentTimeMillis()
                     val json = httpJson(vercelApi + "/v9/projects?limit=100", "GET", token, null)
+                    log("列表请求完成 ${System.currentTimeMillis() - t0}ms")
                     val arr = JSONObject(json).optJSONArray("projects")
                     val out = org.json.JSONArray()
                     if (arr != null) for (i in 0 until arr.length()) {
@@ -967,10 +997,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         private fun httpJson(url: String, method: String, token: String, body: String?): String {
+            val t0 = System.currentTimeMillis()
+            log("→ $method $url")
             val conn = open(url)
             conn.requestMethod = method
-            conn.connectTimeout = 20000
-            conn.readTimeout = 60000
+            conn.connectTimeout = 12000
+            conn.readTimeout = 25000
             conn.setRequestProperty("Authorization", "Bearer $token")
             conn.setRequestProperty("Content-Type", "application/json")
             if (body != null) {
@@ -978,9 +1010,11 @@ class MainActivity : AppCompatActivity() {
                 conn.outputStream.use { it.write(body.toByteArray()) }
             }
             val code = conn.responseCode
+            val ms = System.currentTimeMillis() - t0
             val stream = if (code in 200..299) conn.inputStream else conn.errorStream
             val text = stream?.bufferedReader()?.use { it.readText() } ?: ""
-            if (code !in 200..299) throw IllegalStateException("HTTP $code $text")
+            log("← $code ${ms}ms ${text.take(140)}")
+            if (code !in 200..299) throw IllegalStateException("HTTP $code ${text.take(200)}")
             return text
         }
 
