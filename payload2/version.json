@@ -1,5 +1,5 @@
 {
-  "version": "0.9.0-p41",
-  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.9.0-p41/app-debug.apk",
-  "notes": "Vercel 项目列表、代理支持"
+  "version": "0.9.1-p42",
+  "apk": "https://github.com/zlemoni/blog-admin-app/releases/download/v0.9.1-p42/app-debug.apk",
+  "notes": "GitHub 推送部署（绕过 Vercel API）"
 }
