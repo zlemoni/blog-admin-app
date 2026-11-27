@@ -18,6 +18,9 @@ import java.util.zip.GZIPInputStream
 /** 分片清单：分片数、总大小、每片大小 */
 data class Manifest(val parts: Int, val size: Long, val sizes: List<Long>)
 
+/** Vercel 上传用的文件描述 */
+data class VFile(val rel: String, val sha: String, val size: Long)
+
 class MainActivity : AppCompatActivity() {
 
     private lateinit var web: WebView
@@ -560,6 +563,143 @@ class MainActivity : AppCompatActivity() {
         }
 
         /** 清除本地环境（用户手动调用） */
+        // ---------- 配置 ----------
+        private fun prefs() = getSharedPreferences("cfg", android.content.Context.MODE_PRIVATE)
+
+        @JavascriptInterface
+        fun saveConfig(key: String, value: String) {
+            prefs().edit().putString(key, value).apply()
+        }
+
+        @JavascriptInterface
+        fun loadConfig(): String {
+            val p = prefs()
+            val o = JSONObject()
+            o.put("vercelToken", p.getString("vercelToken", "") ?: "")
+            o.put("vercelProject", p.getString("vercelProject", "") ?: "")
+            o.put("walineUrl", p.getString("walineUrl", "https://c.moodlog.cn/waline") ?: "")
+            return o.toString()
+        }
+
+        /** 用 Vercel API 直接上传 dist 并发布（无需 Git） */
+        @JavascriptInterface
+        fun deployVercel() {
+            io.execute {
+                try {
+                    val token = prefs().getString("vercelToken", "") ?: ""
+                    if (token.isEmpty()) { stage("请先填写 Vercel Token"); return@execute }
+                    val project = prefs().getString("vercelProject", "")?.ifEmpty { "moodlog-blog" } ?: "moodlog-blog"
+                    val dist = File(payloadDir(), "project/dist")
+                    if (!dist.exists()) { stage("没有产物，请先构建"); return@execute }
+
+                    stage("准备上传…")
+                    val files = dist.walkTopDown().filter { it.isFile }.toList()
+                    log("待上传 ${files.size} 个文件")
+
+                    val items = files.map { f ->
+                        val rel = f.relativeTo(dist).invariantSeparatorsPath
+                        VFile(rel, sha1(f), f.length())
+                    }
+
+                    // 1) 逐个上传（Vercel 按 sha 去重）
+                    items.forEachIndexed { i, it ->
+                        stage("上传 ${i + 1}/${items.size}")
+                        uploadVercelFile(token, it.sha, File(dist, it.rel))
+                    }
+
+                    // 2) 创建部署
+                    stage("创建部署…")
+                    val payload = JSONObject().apply {
+                        put("name", project)
+                        put("target", "production")
+                        put("files", org.json.JSONArray().apply {
+                            items.forEach { it2 ->
+                                put(JSONObject().apply {
+                                    put("file", it2.rel)
+                                    put("sha", it2.sha)
+                                    put("size", it2.size)
+                                })
+                            }
+                        })
+                    }
+                    val resp = httpJson("https://api.vercel.com/v13/deployments?forceNew=1", "POST",
+                        token, payload.toString())
+                    val dep = JSONObject(resp)
+                    val id = dep.optString("id")
+                    val url = dep.optString("url")
+                    log("部署已创建: $url")
+
+                    // 3) 轮询状态
+                    var state = ""
+                    var tries = 0
+                    while (tries < 60) {
+                        Thread.sleep(3000)
+                        tries++
+                        val cur = JSONObject(httpJson("https://api.vercel.com/v13/deployments/$id", "GET", token, null))
+                        state = cur.optString("readyState")
+                        stage("部署中: $state")
+                        if (state == "READY" || state == "ERROR" || state == "CANCELED") break
+                    }
+                    if (state == "READY") {
+                        stage("✓ 已发布: https://$url")
+                        js("window.__deployDone && window.__deployDone('" + esc("https://$url") + "')")
+                    } else {
+                        stage("✗ 部署失败: $state")
+                    }
+                } catch (e: Throwable) {
+                    log("部署异常: ${e.message}")
+                    stage("✗ 部署失败: ${e.message}")
+                }
+            }
+        }
+
+        private fun sha1(f: File): String {
+            val md = java.security.MessageDigest.getInstance("SHA-1")
+            f.inputStream().use { input ->
+                val buf = ByteArray(128 * 1024)
+                while (true) { val n = input.read(buf); if (n < 0) break; md.update(buf, 0, n) }
+            }
+            return md.digest().joinToString("") { "%02x".format(it) }
+        }
+
+        private fun uploadVercelFile(token: String, sha: String, f: File) {
+            val conn = URL("https://api.vercel.com/v2/files").openConnection() as HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.doOutput = true
+            conn.connectTimeout = 20000
+            conn.readTimeout = 120000
+            conn.setRequestProperty("Authorization", "Bearer $token")
+            conn.setRequestProperty("Content-Type", "application/octet-stream")
+            conn.setRequestProperty("x-vercel-digest", sha)
+            conn.setFixedLengthStreamingMode(f.length())
+            conn.outputStream.use { os -> f.inputStream().use { it.copyTo(os, 128 * 1024) } }
+            val code = conn.responseCode
+            if (code !in 200..299) {
+                val msg = conn.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
+                // 已存在（409/413）视为成功
+                if (code == 409) return
+                throw IllegalStateException("上传失败 HTTP $code $msg")
+            }
+        }
+
+        private fun httpJson(url: String, method: String, token: String, body: String?): String {
+            val conn = URL(url).openConnection() as HttpURLConnection
+            conn.requestMethod = method
+            conn.connectTimeout = 20000
+            conn.readTimeout = 60000
+            conn.setRequestProperty("Authorization", "Bearer $token")
+            conn.setRequestProperty("Content-Type", "application/json")
+            if (body != null) {
+                conn.doOutput = true
+                conn.outputStream.use { it.write(body.toByteArray()) }
+            }
+            val code = conn.responseCode
+            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+            val text = stream?.bufferedReader()?.use { it.readText() } ?: ""
+            if (code !in 200..299) throw IllegalStateException("HTTP $code $text")
+            return text
+        }
+
         @JavascriptInterface
         fun preview() {
             io.execute { startPreview(payloadDir()) }
